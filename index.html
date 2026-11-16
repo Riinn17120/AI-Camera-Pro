@@ -20,6 +20,9 @@ button,select{font:inherit;color:var(--tx);cursor:pointer}
 .pill{background:#0008;border:0;border-radius:20px;padding:6px 12px;font-size:12px;backdrop-filter:blur(8px)}
 .sug{position:absolute;left:50%;top:46px;transform:translateX(-50%);background:#ff7a1acc;color:#190a00;font-weight:600;border-radius:20px;padding:5px 14px;font-size:13px;z-index:3;white-space:nowrap;transition:.2s}
 .sug.ok{background:#34d399cc}
+.sugbtn{position:absolute;left:50%;top:84px;transform:translateX(-50%);display:flex;gap:8px;z-index:3}
+.sugbtn button{border:0;border-radius:18px;padding:8px 18px;font-weight:700;font-size:13px;background:#34d399;color:#04210f}
+.sugbtn button.no{background:#000a;color:#fff;font-weight:500;backdrop-filter:blur(8px)}
 .lens{position:absolute;left:0;right:0;bottom:8px;display:flex;justify-content:center;gap:8px;z-index:3}
 .lens button{width:38px;height:38px;border-radius:50%;background:#0009;border:1px solid #fff3;font-size:12px}
 .lens button.on{color:var(--ac);border-color:var(--ac);transform:scale(1.12)}
@@ -66,7 +69,7 @@ input[type=range]{width:100%;accent-color:var(--ac)}
 #bAI{padding:8px 14px}
 @media(orientation:landscape) and (max-height:620px){
 #t-cam.on{flex-direction:row}.vf{max-width:none;margin:0}
-.top{flex-direction:column;align-items:flex-start;right:auto;gap:8px}.sug{top:8px}
+.top{flex-direction:column;align-items:flex-start;right:auto;gap:8px}.sug{top:8px}.sugbtn{top:44px}
 .lens{left:auto;right:10px;top:0;bottom:0;flex-direction:column-reverse;justify-content:center}
 .ctrl{max-width:none;width:150px;margin:0;display:flex;flex-direction:column;justify-content:center;gap:12px;padding:8px}
 .modes{flex-direction:column;align-items:center;gap:10px;margin:0}.shutrow{flex-direction:column;gap:14px}
@@ -80,8 +83,8 @@ input[type=range]{width:100%;accent-color:var(--ac)}
  <canvas class="demo" id="demo" width="480" height="640"></canvas>
  <video id="vid" playsinline muted style="display:none"></video>
  <canvas id="ov"></canvas>
- <div class="top"><button class="pill" id="bFlash">⚡ Tắt</button><button class="pill" id="bGrid">▦ Lưới</button><button class="pill on" id="bAI">✨ AI Auto: Bật</button></div>
- <div class="sug" id="sug">Đang tìm chủ thể…</div>
+ <div class="top"><button class="pill" id="bFlash">⚡ Tắt</button><button class="pill" id="bGrid">▦ Lưới</button><button class="pill" id="bRes">📐 4K</button><button class="pill" id="bAI">✨ AI: Tắt</button></div>
+ <div class="sug" id="sug" style="display:none"></div><div class="sugbtn" id="sugBtn" style="display:none"></div>
  <div class="lens" id="lens"></div>
 </div>
 <div class="pro" id="pro">
@@ -139,12 +142,18 @@ const bmp=b=>new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.src=URL.cre
 const blobOf=(c,q=.93)=>new Promise(r=>c.toBlob(r,'image/jpeg',q));
 
 /* ---------- CAMERA ---------- */
-const vid=$('vid'),demo=$('demo'),ov=$('ov');let stream,track,facing='environment',lenses=[],curLens=1,digital=1,mode='photo',aiOn=true,gridOn=true,P={ev:0,iso:100,wb:5500,ct:0};
+const vid=$('vid'),demo=$('demo'),ov=$('ov');const RES={FHD:{w:1920,h:1440,cap:1920},'4K':{w:4096,h:3072,cap:4096},'8K':{w:8192,h:6144,cap:8192}};
+let stream,track,ic,photoCaps,facing='environment',lenses=[],curLens=1,digital=1,mode='photo',aiOn=false,gridOn=true,P={ev:0,iso:100,wb:5500,ct:0},resK=RES[localStorage.getItem('res')]?localStorage.getItem('res'):'4K',baseNote='';
+const note=t=>$('camNote').textContent=t;
+$('bRes').textContent='📐 '+resK;$('bRes').onclick=()=>{resK=resK==='FHD'?'4K':resK==='4K'?'8K':'FHD';localStorage.setItem('res',resK);$('bRes').textContent='📐 '+resK;if(stream)startCam()};
 let tt=0;setInterval(()=>{if(stream)return;const c=demo.getContext('2d'),w=480,h=640,g=c.createLinearGradient(0,0,0,h);g.addColorStop(0,'#5b8def');g.addColorStop(.55,'#ffb27a');g.addColorStop(1,'#2d3b2a');c.fillStyle=g;c.fillRect(0,0,w,h);const x=170+Math.sin(tt)*50;c.fillStyle='#e8d7c3';c.beginPath();c.arc(x,260,38,0,7);c.fill();c.fillRect(x-30,300,60,150);c.fillStyle='#222';c.beginPath();c.arc(x-12,254,4,0,7);c.arc(x+12,254,4,0,7);c.fill();tt+=.04},60);
-async function startCam(){try{stream&&stream.getTracks().forEach(t=>t.stop());
- stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:1920},height:{ideal:1440}},audio:false});
- vid.srcObject=stream;await vid.play();vid.style.display='block';demo.style.display='none';track=stream.getVideoTracks()[0];await detectLenses();$('camNote').textContent=''}
- catch(e){$('camNote').textContent='Không mở được camera (quyền bị chặn?). Đang dùng cảnh mẫu – bạn vẫn có thể thử khung hình AI.'}}
+async function startCam(){try{stream&&stream.getTracks().forEach(t=>t.stop());F.on=false;sg.p=null;sg.hold=0;const R=RES[resK];
+ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:R.w},height:{ideal:R.h}},audio:false});
+ vid.srcObject=stream;await vid.play();vid.style.display='block';demo.style.display='none';track=stream.getVideoTracks()[0];
+ ic=window.ImageCapture?new ImageCapture(track):null;photoCaps=null;if(ic)try{photoCaps=await ic.getPhotoCapabilities()}catch(_){}
+ await detectLenses();const st=track.getSettings(),hi=photoCaps&&photoCaps.imageWidth?` · ảnh tĩnh tối đa ${photoCaps.imageWidth.max}×${photoCaps.imageHeight.max}`:'';
+ baseNote=`Luồng camera ${st.width}×${st.height}${hi}`;note(baseNote)}
+ catch(e){note('Không mở được camera (quyền bị chặn?). Đang dùng cảnh mẫu – bạn vẫn có thể thử khung hình AI.')}}
 /* Tele / không tele: dò thấu kính thật, thiếu thì dùng zoom phần cứng, rồi zoom số */
 async function detectLenses(){const devs=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='videoinput'),cap=track.getCapabilities?track.getCapabilities():{};
  const find=re=>devs.find(d=>re.test(d.label));const uw=find(/ultra|0\.5|0,5/i),tele=find(/tele|3x|5x|zoom/i);
@@ -152,76 +161,149 @@ async function detectLenses(){const devs=(await navigator.mediaDevices.enumerate
  const hz=cap.zoom?cap.zoom.max:1;
  [2,3,5].forEach(z=>{if(z===3&&tele)lenses.push({z:3,dev:tele.deviceId,t:'3×',tele:1});else lenses.push({z,hw:hz>=z,t:z+'×'})});
  $('lens').innerHTML=lenses.map((l,i)=>`<button data-i="${i}" class="${l.z===1?'on':''}">${l.t}</button>`).join('')}
-$('lens').onclick=async e=>{const i=e.target.dataset.i;if(i==null)return;const l=lenses[i];document.querySelectorAll('#lens button').forEach(b=>b.classList.toggle('on',b===e.target));curLens=l.z;digital=1;
- if(stream&&l.dev){try{stream.getTracks().forEach(t=>t.stop());stream=await navigator.mediaDevices.getUserMedia({video:{deviceId:{exact:l.dev}}});vid.srcObject=stream;track=stream.getVideoTracks()[0];$('camNote').textContent='Dùng ống kính '+l.t+' (phần cứng)';return}catch(_){}}
+$('lens').onclick=async e=>{const i=e.target.dataset.i;if(i==null)return;const l=lenses[i];document.querySelectorAll('#lens button').forEach(b=>b.classList.toggle('on',b===e.target));curLens=l.z;digital=1;F.on=false;sg.p=null;
+ if(stream&&l.dev){try{stream.getTracks().forEach(t=>t.stop());stream=await navigator.mediaDevices.getUserMedia({video:{deviceId:{exact:l.dev},width:{ideal:RES[resK].w},height:{ideal:RES[resK].h}}});vid.srcObject=stream;vid.play().catch(()=>{});track=stream.getVideoTracks()[0];ic=window.ImageCapture?new ImageCapture(track):null;photoCaps=null;ic&&ic.getPhotoCapabilities().then(c=>photoCaps=c).catch(()=>{});$('camNote').textContent='Dùng ống kính '+l.t+' (phần cứng)';return}catch(_){}}
  if(l.z<1){digital=1;$('camNote').textContent='Máy không có góc siêu rộng – dùng 1×';return}
  if(l.z>1){if(l.hw&&track){try{await track.applyConstraints({advanced:[{zoom:l.z}]});$('camNote').textContent='Zoom quang/phần cứng '+l.t;return}catch(_){}}
   digital=l.z;$('camNote').textContent=l.tele?'':'Máy không có tele → zoom số '+l.t+' (cắt khung, chất lượng giảm)'}else $('camNote').textContent='';
  applyView()};
-function applyView(){const f=`brightness(${Math.pow(2,P.ev*.7)*Math.pow(P.iso/100,.25)}) contrast(${1+P.ct/100}) sepia(${clamp((5500-P.wb)/6000,0,.5)}) hue-rotate(${clamp((P.wb-5500)/60,-40,0)}deg)`;
+function applyView(){const f=`brightness(${(mode==='night'?1.5:1)*Math.pow(2,P.ev*.7)*Math.pow(P.iso/100,.25)}) contrast(${1+P.ct/100}) sepia(${clamp((5500-P.wb)/6000,0,.5)}) hue-rotate(${clamp((P.wb-5500)/60,-40,0)}deg)`;
  [vid,demo].forEach(e=>{e.style.filter=f})}
 $('flip').onclick=()=>{facing=facing==='environment'?'user':'environment';startCam()};
 $('bFlash').onclick=async e=>{const on=e.target.dataset.on!=='1';try{await track.applyConstraints({advanced:[{torch:on}]});e.target.dataset.on=on?1:0;e.target.textContent=on?'⚡ Bật':'⚡ Tắt'}catch(_){e.target.textContent='⚡ N/A'}};
-$('bGrid').onclick=()=>{gridOn=!gridOn};$('bAI').onclick=e=>{aiOn=!aiOn;e.target.classList.toggle('on',aiOn);e.target.textContent='✨ AI Auto: '+(aiOn?'Bật':'Tắt')};
+$('bGrid').onclick=()=>{gridOn=!gridOn};$('bAI').onclick=e=>{aiOn=!aiOn;F.on=false;sg.p=null;sg.q=null;sg.hold=0;sg.until=0;subj=null;e.target.classList.toggle('on',aiOn);e.target.textContent='✨ AI: '+(aiOn?'Bật':'Tắt');ui('✨ AI đang tìm chủ thể…',false)};
 $('modes').onclick=e=>{const m=e.target.dataset.m;if(!m)return;mode=m;document.querySelectorAll('#modes b').forEach(b=>b.classList.toggle('on',b===e.target));$('pro').classList.toggle('on',m==='pro');
- const pre={photo:[0,100,5500,0],portrait:[.2,100,5800,8],night:[.8,1600,5200,12],pro:[P.ev,P.iso,P.wb,P.ct]}[m];[P.ev,P.iso,P.wb,P.ct]=pre;syncPro();applyView()};
+ const pre={photo:[0,100,5500,0],portrait:[.2,100,5800,8],night:[0,100,5200,0],pro:[P.ev,P.iso,P.wb,P.ct]}[m];[P.ev,P.iso,P.wb,P.ct]=pre;syncPro();applyView();
+ try{const ec=track&&track.getCapabilities&&track.getCapabilities().exposureCompensation;if(ec)track.applyConstraints({advanced:[{exposureCompensation:m==='night'?Math.min(ec.max,1.5):(m==='pro'?P.ev:0)}]}).catch(()=>{})}catch(_){}
+ note(m==='night'?'Chụp đêm: giữ máy yên ~2 giây, máy gộp nhiều khung để giảm nhiễu':baseNote)};
 const prs=[['pEV','ev','oEV',v=>(+v).toFixed(1)],['pISO','iso','oISO',v=>v],['pWB','wb','oWB',v=>v],['pCT','ct','oCT',v=>v]];
 function syncPro(){prs.forEach(([i,k,o,f])=>{$(i).value=P[k];$(o).textContent=f(P[k])})}
 prs.forEach(([i,k,o,f])=>$(i).oninput=()=>{P[k]=+$(i).value;$(o).textContent=f(P[k]);applyView();if(k==='ev'&&track)track.applyConstraints({advanced:[{exposureCompensation:P.ev}]}).catch(()=>{})});
 const src=()=>stream?vid:demo;
 
-/* ---------- Khung hình AI (nhận diện mặt/mắt/chủ thể) ---------- */
+/* ---------- Khung hình AI: GỢI Ý → bạn bấm Đồng ý → máy tự chuyển khung ---------- */
 const FD='FaceDetector' in window?new FaceDetector({fastMode:true,maxDetectedFaces:4}):null;
 const sm=document.createElement('canvas');sm.width=96;sm.height=128;const sx=sm.getContext('2d',{willReadFrequently:true});
-let subj=null,hy=[],level=0;
-async function smart(){if(!aiOn){subj=null;$('sug').style.display='none';return}$('sug').style.display='block';
- const s=src();let box=null,eyes=null,kind='chủ thể';
- try{if(FD&&stream){const f=await FD.detect(vid);if(f.length){const b=f.sort((a,b)=>b.boundingBox.width-a.boundingBox.width)[0];const W=vid.videoWidth,H=vid.videoHeight,r=Math.max(ov.width/W,ov.height/H),ox=(W*r-ov.width)/2,oy=(H*r-ov.height)/2;
-  const m=p=>({x:p.x*r-ox,y:p.y*r-oy}),bb=b.boundingBox;box={x:bb.x*r-ox,y:bb.y*r-oy,w:bb.width*r,h:bb.height*r};kind='khuôn mặt';
-  eyes=(b.landmarks||[]).filter(l=>l.type==='eye').map(l=>m(l.locations[0]))}}}catch(_){}
- if(!box){sx.drawImage(s,0,0,96,128);const d=sx.getImageData(0,0,96,128).data;let sw=0,cx=0,cy=0,ex=0,ey=0;const lum=[];for(let i=0;i<d.length;i+=4)lum.push(.3*d[i]+.59*d[i+1]+.11*d[i+2]);
-  const mean=lum.reduce((a,b)=>a+b)/lum.length;for(let y=1;y<127;y++)for(let x=1;x<95;x++){const i=y*96+x,e=Math.abs(lum[i]-lum[i+1])+Math.abs(lum[i]-lum[i+96]),w=e*e+Math.abs(lum[i]-mean);sw+=w;cx+=x*w;cy+=y*w}
-  if(sw>0){cx=cx/sw/96*ov.width;cy=cy/sw/128*ov.height;const sz=ov.width*.3;box={x:cx-sz/2,y:cy-sz/2,w:sz,h:sz}}}
- subj=box?{box,eyes,kind}:null;
- if(!box){$('sug').textContent='Hướng máy vào chủ thể';return}
- const w=ov.width,h=ov.height,cx=box.x+box.w/2,cy=box.y+(eyes&&eyes.length?(eyes[0].y-box.y):box.h*.35),tx=cx<w/2?w/3:2*w/3,ty=h/3,dx=(cx-tx)/w,dy=(cy-ty)/h;let msg,ok=false;
- const area=box.w*box.h/(w*h);
- if(Math.abs(dx)<.06&&Math.abs(dy)<.08)msg=`✅ ${kind[0].toUpperCase()+kind.slice(1)} đã vào điểm 1/3 – chụp đi!`,ok=true;
- else if(Math.abs(dx)>=Math.abs(dy))msg=`${dx>0?'⬅ Xoay máy sang trái':'➡ Xoay máy sang phải'} để ${kind} vào điểm 1/3`;
- else msg=dy>0?'⬆ Nâng máy lên (chừa ít đầu hơn)':'⬇ Hạ máy xuống (chừa thêm đầu)';
- if(!ok&&kind==='khuôn mặt'){if(area<.03)msg='🔍 Lại gần hơn hoặc zoom 2× – mặt còn nhỏ';else if(area>.35)msg='↔ Lùi ra một chút để không cắt đầu'}
- $('sug').textContent=msg;$('sug').classList.toggle('ok',ok);subj.tgt={x:tx,y:ty}}
-/* ===== AI Auto: tự zoom + căn khung + cân sáng (nhẹ, mượt) ===== */
-const V={z:1,tx:0,ty:0},T={z:1,tx:0,ty:0};let miss=0,last=null;
-const aeC=document.createElement('canvas');aeC.width=48;aeC.height=64;const aeX=aeC.getContext('2d',{willReadFrequently:true});
-function ae(){aeX.drawImage(src(),0,0,48,64);const d=aeX.getImageData(0,0,48,64).data,n=d.length/4,L=[];let m=0;for(let i=0;i<d.length;i+=4){const y=.3*d[i]+.59*d[i+1]+.11*d[i+2];L.push(y);m+=y}m/=n;let v=0;L.forEach(y=>v+=(y-m)**2);v=Math.sqrt(v/n);
- const te=clamp(Math.log2(118/Math.max(m,8))*.9+(mode==='night'?.4:0),-1.5,1.5),tc=clamp((55-v)*.5,-10,20);
- if(Math.abs(te-P.ev)>.05||Math.abs(tc-P.ct)>1){P.ev+=(te-P.ev)*.3;P.ct+=(tc-P.ct)*.3;applyView()}}
-function autoFrame(){const w=ov.width,h=ov.height;T.z=digital;T.tx=w*(1-digital)/2;T.ty=h*(1-digital)/2;if(!aiOn)return;
- if(subj)miss=0,last=subj;else miss++;const sj=subj||(miss<6?last:null);
- if(sj&&sj.kind==='khuôn mặt'){const b=sj.box,cx=b.x+b.w/2,cy=b.y+(sj.eyes&&sj.eyes.length?sj.eyes[0].y-b.y:b.h*.4),z=Math.max(digital,clamp(.36*w/b.w,1,3));
-  T.z=z;T.tx=clamp(w/2-z*cx,w-z*w,0);T.ty=clamp(h*.4-z*cy,h-z*h,0);$('sug').textContent=`✨ AI tự căn khung · ${z.toFixed(1)}×`;$('sug').classList.add('ok')}
- else{$('sug').textContent=sj?'✨ AI Auto: tối ưu ánh sáng':'✨ AI Auto: đang tìm chủ thể…';$('sug').classList.toggle('ok',!!sj)}
- if(mode!=='pro')ae()}
-function step(){let c=0;for(const p of['z','tx','ty']){const d=T[p]-V[p];if(Math.abs(d)>(p==='z'?.002:.3)){V[p]+=d*.12;c=1}}
+let subj=null;const sg={p:null,q:null,hold:0,until:0,sig:''},F={on:false,z:1,tx:0,ty:0},V={z:1,tx:0,ty:0},T={z:1,tx:0,ty:0};
+const cover=s=>{const W=s.videoWidth||s.width,H=s.videoHeight||s.height,r=Math.max(ov.width/W,ov.height/H);return{W,H,r,ox:(W*r-ov.width)/2,oy:(H*r-ov.height)/2}};
+async function detect(){if(!ov.width)return;const s=src(),cv=cover(s);let box=null,eyes=null,kind='chủ thể';
+ try{if(FD&&stream){const f=await FD.detect(vid);if(f.length){const b=f.sort((a,b)=>b.boundingBox.width-a.boundingBox.width)[0],bb=b.boundingBox,m=p=>({x:p.x*cv.r-cv.ox,y:p.y*cv.r-cv.oy});
+  box={x:bb.x*cv.r-cv.ox,y:bb.y*cv.r-cv.oy,w:bb.width*cv.r,h:bb.height*cv.r};kind='khuôn mặt';eyes=(b.landmarks||[]).filter(l=>l.type==='eye').map(l=>m(l.locations[0]))}}}catch(_){}
+ if(!box){const vw=ov.width/cv.r,vh=ov.height/cv.r;sx.drawImage(s,(cv.W-vw)/2,(cv.H-vh)/2,vw,vh,0,0,96,128);const d=sx.getImageData(0,0,96,128).data,lum=[];for(let i=0;i<d.length;i+=4)lum.push(.3*d[i]+.59*d[i+1]+.11*d[i+2]);
+  const mean=lum.reduce((a,b)=>a+b)/lum.length;let sw=0,cx=0,cy=0;
+  for(let y=1;y<127;y++)for(let x=1;x<95;x++){const i=y*96+x,e=Math.abs(lum[i]-lum[i+1])+Math.abs(lum[i]-lum[i+96]),w=e*e+Math.abs(lum[i]-mean);sw+=w;cx+=x*w;cy+=y*w}
+  if(sw>0){cx=cx/sw/96*ov.width;cy=cy/sw/128*ov.height;const z=ov.width*.3;box={x:cx-z/2,y:cy-z/2,w:z,h:z}}}
+ subj=box?{box,eyes,kind}:null}
+/* Tính khung được đề xuất (chưa áp dụng): zoom + dịch để chủ thể vào điểm 1/3 */
+function plan(){const w=ov.width,h=ov.height,b=subj.box,face=subj.kind==='khuôn mặt',cx=b.x+b.w/2,
+ cy=face&&subj.eyes&&subj.eyes.length?subj.eyes.reduce((a,e)=>a+e.y,0)/subj.eyes.length:b.y+b.h*(face?.4:.5);
+ const z=Math.max(digital,face?clamp(.36*w/b.w,1,3):1.3),centered=face&&Math.abs(cx-w/2)<.12*w,
+ X=centered?w/2:(cx<w/2?w/3:2*w/3),Y=face?h*.36:(cy<h/2?h/3:2*h/3),tx=clamp(X-z*cx,w-z*w,0),ty=clamp(Y-z*cy,h-z*h,0);
+ return{z,tx,ty,txt:`Gợi ý: ${z>digital+.05?`zoom ${z.toFixed(1)}× · `:''}${face?'đặt khuôn mặt':'đặt chủ thể'} ${centered?'ở giữa':'vào điểm 1/3'}`}}
+function ui(txt,ok,btns=[]){const s=$('sug'),b=$('sugBtn');s.style.display=aiOn?'block':'none';b.style.display=aiOn&&btns.length?'flex':'none';if(!aiOn)return;
+ s.textContent=txt;s.classList.toggle('ok',!!ok);const sig=btns.map(x=>x[0]).join();if(sig!==sg.sig){sg.sig=sig;b.innerHTML=btns.map(([id,l,c])=>`<button data-a="${id}" class="${c||''}">${l}</button>`).join('')}}
+const applied=()=>ui(`✅ Đã chuyển khung AI · ${F.z.toFixed(1)}×`,true,[['undo','↩ Hoàn tác','no']]);
+function suggest(){const w=ov.width,h=ov.height,now=performance.now();
+ if(!subj){sg.hold=0;sg.q=null;sg.p=null;return F.on?applied():ui('✨ Hướng máy vào chủ thể…',false)}
+ const p=plan(),q=sg.q;sg.q=q?{z:q.z+(p.z-q.z)*.5,tx:q.tx+(p.tx-q.tx)*.5,ty:q.ty+(p.ty-q.ty)*.5,txt:p.txt}:p;sg.hold++;
+ const c=F.on?F:{z:digital,tx:w*(1-digital)/2,ty:h*(1-digital)/2},d=Math.abs(sg.q.z-c.z)>.15||Math.abs(sg.q.tx-c.tx)>.05*w||Math.abs(sg.q.ty-c.ty)>.05*h;
+ if(sg.hold<3||now<sg.until){sg.p=null;return F.on?applied():ui(sg.hold<3?'✨ Đang phân tích bố cục…':'✨ AI đang theo dõi…',false)}
+ if(d){sg.p=sg.q;ui(sg.q.txt,false,[['yes','✔ Đồng ý'],['no','✕ Bỏ qua','no']])}
+ else{sg.p=null;F.on?applied():ui('✅ Bố cục đã đẹp – chụp đi!',true)}}
+function accept(){if(!sg.p)return;Object.assign(F,{on:true,z:sg.p.z,tx:sg.p.tx,ty:sg.p.ty});sg.p=null;sg.hold=0;sg.until=performance.now()+1200;applied()}
+function dismiss(){sg.p=null;sg.hold=0;sg.until=performance.now()+8000;F.on?applied():ui('✨ AI đang theo dõi…',false)}
+function undo(){F.on=false;sg.p=null;sg.hold=0;sg.until=performance.now()+5000;ui('↩ Đã về khung gốc',false)}
+$('sugBtn').onclick=e=>{const a=e.target.dataset.a;if(a==='yes')accept();else if(a==='no')dismiss();else if(a==='undo')undo()};
+/* Chuyển khung mượt tới đích: khung đã đồng ý, hoặc khung gốc theo ống kính */
+function step(){const w=ov.width,h=ov.height;if(F.on){T.z=F.z;T.tx=F.tx;T.ty=F.ty}else{T.z=digital;T.tx=w*(1-digital)/2;T.ty=h*(1-digital)/2}
+ let c=0;for(const p of['z','tx','ty']){const d=T[p]-V[p];if(Math.abs(d)>(p==='z'?.002:.3)){V[p]+=d*.12;c=1}}
  if(c||!V.init){V.init=1;vid.style.transform=demo.style.transform=`translate(${V.tx}px,${V.ty}px) scale(${V.z})`}}
 function crop(s){const W=s.videoWidth||480,H=s.videoHeight||640,r=Math.max(ov.width/W,ov.height/H),ox=(W*r-ov.width)/2,oy=(H*r-ov.height)/2,z=V.z;return[(-V.tx/z+ox)/r,(-V.ty/z+oy)/r,ov.width/z/r,ov.height/z/r]}
-/* bộ điều tốc: phân tích tối đa ~25% thời gian CPU, tạm dừng khi ẩn tab */
-(async function loop(){const t0=performance.now();if(!document.hidden&&$('t-cam').classList.contains('on')){try{await smart();autoFrame()}catch(_){}}setTimeout(loop,Math.max(220,(performance.now()-t0)*3))})();
+/* chỉ phân tích khi bật AI; điều tốc ~25% CPU, tạm dừng khi ẩn tab */
+(async function loop(){const t0=performance.now();if(aiOn&&!document.hidden&&$('t-cam').classList.contains('on')){try{await detect();suggest()}catch(_){}}setTimeout(loop,Math.max(220,(performance.now()-t0)*3))})();
 function drawOv(){const c=ov.getContext('2d'),r=ov.getBoundingClientRect();if(ov.width!==r.width)ov.width=r.width,ov.height=r.height;const w=ov.width,h=ov.height;c.clearRect(0,0,w,h);
  if(gridOn){c.strokeStyle='#fff5';c.lineWidth=1;c.beginPath();[1,2].forEach(i=>{c.moveTo(w*i/3,0);c.lineTo(w*i/3,h);c.moveTo(0,h*i/3);c.lineTo(w,h*i/3)});c.stroke()}
- if(subj){const b=subj.box;c.strokeStyle=subj.kind==='khuôn mặt'?'#34d399':'#ff7a1a';c.lineWidth=2;c.strokeRect(b.x,b.y,b.w,b.h);
-  if(subj.eyes)subj.eyes.forEach(p=>{c.beginPath();c.arc(p.x,p.y,4,0,7);c.fillStyle='#34d399';c.fill()});
-  if(subj.tgt){c.strokeStyle='#ff7a1a';c.beginPath();c.arc(subj.tgt.x,subj.tgt.y,12,0,7);c.stroke()}}
- // histogram (Pro)
+ const X=x=>x*V.z+V.tx,Y=y=>y*V.z+V.ty;
+ if(aiOn&&subj){const b=subj.box;c.strokeStyle=subj.kind==='khuôn mặt'?'#34d399':'#ff7a1a';c.lineWidth=2;c.strokeRect(X(b.x),Y(b.y),b.w*V.z,b.h*V.z);
+  if(subj.eyes)subj.eyes.forEach(p=>{c.beginPath();c.arc(X(p.x),Y(p.y),4,0,7);c.fillStyle='#34d399';c.fill()})}
+ if(aiOn&&sg.p){const p=sg.p;c.setLineDash([8,6]);c.strokeStyle='#ff7a1a';c.lineWidth=2.5;c.strokeRect(X(-p.tx/p.z),Y(-p.ty/p.z),w/p.z*V.z,h/p.z*V.z);c.setLineDash([])}
  if($('pro').classList.contains('on')){sx.filter='none';sx.drawImage(src(),0,0,96,128);const d=sx.getImageData(0,0,96,128).data,H=new Array(48).fill(0);for(let i=0;i<d.length;i+=4)H[(.3*d[i]+.59*d[i+1]+.11*d[i+2])*47/255|0]++;const hc=$('hist').getContext('2d'),m=Math.max(...H);hc.clearRect(0,0,300,42);hc.fillStyle='#ddd';H.forEach((v,i)=>hc.fillRect(i*6.25,42-v/m*40,5,v/m*40))}
  step();requestAnimationFrame(drawOv)}drawOv();
 
-/* ---------- Chụp ---------- */
-$('shut').onclick=async()=>{const s=src(),cr=crop(s),k=Math.min(1,2400/Math.max(cr[2],cr[3])),w=Math.round(cr[2]*k),h=Math.round(cr[3]*k),c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');
- x.filter=`brightness(${Math.pow(2,P.ev*.7)*Math.pow(P.iso/100,.25)}) contrast(${1+P.ct/100})`;x.drawImage(s,...cr,0,0,w,h);
- const b=await blobOf(c),id=Date.now();await dbPut({id,t:id,orig:b,cur:b,thumb:await thumbOf(b),p:null,src:'camera',mode});$('thumb').style.backgroundImage=`url(${URL.createObjectURL(b)})`;
- $('vf').style.opacity=.4;setTimeout(()=>$('vf').style.opacity=1,100);if(navigator.vibrate)navigator.vibrate(20)};
+/* ---------- Xử lý ảnh: căn chỉnh khung, xếp chồng, giảm nhiễu (hàm thuần) ---------- */
+/*PURE-START*/
+function lumaGrid(d,w,h,ds){const gw=(w/ds)|0,gh=(h/ds)|0,g=new Float32Array(gw*gh),o=[ds/6|0,ds/2|0,ds*5/6|0];
+ for(let y=0;y<gh;y++)for(let x=0;x<gw;x++){let a=0;for(const j of o)for(const i of o){const p=((y*ds+j)*w+x*ds+i)<<2;a+=.3*d[p]+.59*d[p+1]+.11*d[p+2]}g[y*gw+x]=a/9}
+ return{g,gw,gh}}
+function align1(A,B,R){let best=1e18,bx=0,by=0;
+ for(let dy=-R;dy<=R;dy++)for(let dx=-R;dx<=R;dx++){let s=0,n=0;
+  for(let y=R;y<A.gh-R;y+=2)for(let x=R;x<A.gw-R;x+=2){s+=Math.abs(A.g[y*A.gw+x]-B.g[(y+dy)*B.gw+x+dx]);n++}
+  s/=n;if(s<best){best=s;bx=dx;by=dy}}
+ return[bx,by,best]}
+function refine(refP,P,d,w,h,px,py,dx,dy,ds){let best=1e18,rx=dx,ry=dy;
+ for(let jy=-ds;jy<=ds;jy++)for(let jx=-ds;jx<=ds;jx++){const ox=dx+jx,oy=dy+jy;if(px+ox<0||py+oy<0||px+ox+P>w||py+oy+P>h)continue;let s=0;
+  for(let y=0;y<P;y+=3){const rr=y*P,cc=((py+oy+y)*w+px+ox)<<2;for(let x=0;x<P;x+=3){const p=cc+(x<<2);s+=Math.abs(refP[rr+x]-((77*d[p]+151*d[p+1]+28*d[p+2])>>8))}}
+  if(s<best){best=s;rx=ox;ry=oy}}
+ const m=Math.ceil(P/3);return[rx,ry,best/(m*m)]}
+function accum(acc,d0,d,w,h,dx,dy,thr){
+ for(let y=0;y<h;y++){let sy=y+dy;sy=sy<0?0:sy>=h?h-1:sy;const ro=y*w,co=sy*w;
+  for(let x=0;x<w;x++){let sx2=x+dx;sx2=sx2<0?0:sx2>=w?w-1:sx2;const pr=(ro+x)<<2,pc=(co+sx2)<<2,a=(ro+x)*3;
+   for(let c=0;c<3;c++){const r=d0[pr+c],v=d[pc+c];acc[a+c]+=(v-r>thr||r-v>thr)?r:v}}}}
+function boxBlur(src,w,h,r){const tmp=new Uint8ClampedArray(src.length),out=new Uint8ClampedArray(src.length),k=2*r+1;
+ for(let y=0;y<h;y++){const o=y*w;let s=0;for(let i=-r;i<=r;i++)s+=src[o+Math.min(w-1,Math.max(0,i))];
+  for(let x=0;x<w;x++){tmp[o+x]=s/k;const a=x+r+1,b=x-r;s+=src[o+(a>=w?w-1:a)]-src[o+(b<0?0:b)]}}
+ for(let x=0;x<w;x++){let s=0;for(let i=-r;i<=r;i++)s+=tmp[Math.min(h-1,Math.max(0,i))*w+x];
+  for(let y=0;y<h;y++){out[y*w+x]=s/k;const a=y+r+1,b=y-r;s+=tmp[(a>=h?h-1:a)*w+x]-tmp[(b<0?0:b)*w+x]}}
+ return out}
+/* lọc sigma giữ cạnh: chỉ trung bình các điểm lân cận có độ sáng gần nhau (±T) */
+function sigma(Y,w,h,T,st){const out=Y.slice();
+ for(let y=st;y<h-st;y++){let i=y*w+st;for(let x=st;x<w-st;x++,i++){const c=Y[i];let s=c,n=1,v;
+  v=Y[i-st*w-st];if(v-c<=T&&c-v<=T){s+=v;n++}v=Y[i-st*w];if(v-c<=T&&c-v<=T){s+=v;n++}v=Y[i-st*w+st];if(v-c<=T&&c-v<=T){s+=v;n++}
+  v=Y[i-st];if(v-c<=T&&c-v<=T){s+=v;n++}v=Y[i+st];if(v-c<=T&&c-v<=T){s+=v;n++}
+  v=Y[i+st*w-st];if(v-c<=T&&c-v<=T){s+=v;n++}v=Y[i+st*w];if(v-c<=T&&c-v<=T){s+=v;n++}v=Y[i+st*w+st];if(v-c<=T&&c-v<=T){s+=v;n++}
+  out[i]=s/n}}
+ return out}
+/*PURE-END*/
+async function cleanup(img,w,h,o){const d=img.data,n=w*h;let Y=new Uint8ClampedArray(n),U=new Uint8ClampedArray(n),Vv=new Uint8ClampedArray(n);
+ for(let i=0,p=0;i<n;i++,p+=4){const r=d[p],g=d[p+1],b=d[p+2];Y[i]=.299*r+.587*g+.114*b;U[i]=128-.168736*r-.331264*g+.5*b;Vv[i]=128+.5*r-.418688*g-.081312*b}
+ note(o.label+': giảm nhiễu màu…');await tick();U=boxBlur(U,w,h,o.rc);Vv=boxBlur(Vv,w,h,o.rc);
+ note(o.label+': giảm nhiễu sáng…');await tick();Y=sigma(Y,w,h,o.T1,o.s1);if(o.T2){await tick();Y=sigma(Y,w,h,o.T2,o.s2)}
+ let lut=null;if(o.tone){let m=0,c=0;for(let i=0;i<n;i+=13){m+=Y[i];c++}m=Math.max(8,m/c)/255;const g=clamp(Math.log(.42)/Math.log(m),.5,1);lut=new Uint8ClampedArray(256).map((_,i)=>255*Math.pow(i/255,g))}
+ const cs=o.cs||1;
+ for(let i=0,p=0;i<n;i++,p+=4){const y=lut?lut[Y[i]]:Y[i],u=(U[i]-128)*cs,v=(Vv[i]-128)*cs;d[p]=y+1.402*v;d[p+1]=y-.344136*u-.714136*v;d[p+2]=y+1.772*u}}
+/* Xếp chồng N khung (căn chỉnh 2 cấp, loại điểm chuyển động) rồi giảm nhiễu */
+async function stackShot(s,cr,k,o){const w=Math.round(cr[2]*k),h=Math.round(cr[3]*k),n=w*h,c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d',{willReadFrequently:true}),acc=new Uint16Array(n*3);
+ const ds=Math.max(4,Math.round(w/256)),P=Math.min(384,w>>1,h>>1),px=(w-P)>>1,py=(h-P)>>1;let d0=null,g0=null,refP=null,used=0;
+ for(let i=0;i<o.N;i++){note(`${o.label} ${i+1}/${o.N} – giữ yên máy…`);if(i){await nextFrame(s);if(o.skip)await nextFrame(s)}
+  x.drawImage(s,...cr,0,0,w,h);const d=x.getImageData(0,0,w,h).data;
+  if(!d0){d0=d;g0=lumaGrid(d0,w,h,ds);refP=new Uint8Array(P*P);for(let y=0;y<P;y++)for(let xx=0;xx<P;xx++){const p=((py+y)*w+px+xx)<<2;refP[y*P+xx]=(77*d0[p]+151*d0[p+1]+28*d0[p+2])>>8}
+   for(let j=0;j<n;j++){acc[j*3]=d0[j<<2];acc[j*3+1]=d0[(j<<2)+1];acc[j*3+2]=d0[(j<<2)+2]}used=1;continue}
+  const[bx,by]=align1(g0,lumaGrid(d,w,h,ds),10),[rx,ry,mad]=refine(refP,P,d,w,h,px,py,bx*ds,by*ds,ds);
+  if(mad<=o.maxMad){accum(acc,d0,d,w,h,rx,ry,o.thr);used++}await tick()}
+ const out=x.createImageData(w,h),od=out.data;for(let j=0;j<n;j++){const a=j*3,p=j<<2;od[p]=acc[a]/used;od[p+1]=acc[a+1]/used;od[p+2]=acc[a+2]/used;od[p+3]=255}
+ d0=null;await cleanup(out,w,h,o);x.putImageData(out,0,0);return{c,used}}
+
+/* ---------- Chụp: độ phân giải cao · giảm nhiễu · chụp đêm xếp chồng khung ---------- */
+let busy=false;const tick=()=>new Promise(r=>setTimeout(r,0));
+const nextFrame=s=>Promise.race([new Promise(r=>s.requestVideoFrameCallback?s.requestVideoFrameCallback(()=>r()):setTimeout(r,70)),new Promise(r=>setTimeout(r,250))]);
+function meanLuma(s){sx.drawImage(s,0,0,96,128);const d=sx.getImageData(0,0,96,128).data;let m=0;for(let i=0;i<d.length;i+=4)m+=.3*d[i]+.59*d[i+1]+.11*d[i+2];return m/(d.length/4)}
+const hiOK=()=>!!(ic&&photoCaps&&photoCaps.imageWidth&&photoCaps.imageWidth.max>(track.getSettings().width||0)*1.15);
+async function hiResShot(cr,R){const pc=photoCaps,Wv=vid.videoWidth,Hv=vid.videoHeight,iw=clamp(R.cap,pc.imageWidth.min,pc.imageWidth.max),ih=clamp(Math.round(R.cap*.75),pc.imageHeight.min,pc.imageHeight.max);
+ const blob=await ic.takePhoto({imageWidth:iw,imageHeight:ih}),im=await createImageBitmap(blob,{imageOrientation:'from-image'});
+ if(Math.abs(im.width/im.height-Wv/Hv)>.03)throw Error('lệch tỉ lệ');
+ const f=im.width/Wv,sw=cr[2]*f,sh=cr[3]*f,k=Math.min(1,R.cap/Math.max(sw,sh)),w=Math.round(sw*k),h=Math.round(sh*k),c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,cr[0]*f,cr[1]*f,sw,sh,0,0,w,h);return c}
+function adjust(c){const b=Math.pow(2,P.ev*.7)*Math.pow(P.iso/100,.25),ct=1+P.ct/100;if(Math.abs(b-1)<.01&&Math.abs(ct-1)<.01)return c;const c2=document.createElement('canvas');c2.width=c.width;c2.height=c.height;const x=c2.getContext('2d');x.filter=`brightness(${b}) contrast(${ct})`;x.drawImage(c,0,0);return c2}
+$('shut').onclick=async()=>{if(busy)return;busy=true;$('shut').style.opacity=.5;
+ try{const s=src(),R=RES[resK],cr=crop(s),L=Math.max(cr[2],cr[3]);let k=Math.min(1,R.cap/L),cv,info='';
+  if(mode==='night'&&stream){k=Math.min(k,Math.sqrt(12.7e6/(cr[2]*cr[3])));const N=cr[2]*cr[3]*k*k>9e6?6:8,r=await stackShot(s,cr,k,{N,label:'Chụp đêm',skip:1,maxMad:35,thr:50,rc:4,T1:18,s1:2,T2:10,s2:1,tone:1,cs:1.12});cv=r.c;info=`xếp chồng ${r.used}/${N} khung`}
+  else{if(stream&&hiOK()&&R.cap>2200){try{cv=await hiResShot(cr,R);info='ảnh tĩnh gốc cảm biến'}catch(_){cv=null}}
+   if(!cv){if(stream&&meanLuma(s)<80){k=Math.min(k,Math.sqrt(12.7e6/(cr[2]*cr[3])));const r=await stackShot(s,cr,k,{N:3,label:'Thiếu sáng',maxMad:30,thr:44,rc:2,T1:8,s1:1});cv=r.c;info=`cảnh tối: gộp ${r.used}/3 khung`}
+    else{const w=Math.round(cr[2]*k),h=Math.round(cr[3]*k);cv=document.createElement('canvas');cv.width=w;cv.height=h;cv.getContext('2d').drawImage(s,...cr,0,0,w,h)}}
+   cv=adjust(cv)}
+  note('Đang lưu…');await tick();const b=await blobOf(cv,.95),id=Date.now(),w=cv.width,h=cv.height;
+  await dbPut({id,t:id,orig:b,cur:b,thumb:await thumbOf(b),p:null,src:'camera',mode});$('thumb').style.backgroundImage=`url(${URL.createObjectURL(b)})`;
+  note(`Đã lưu ${w}×${h} (${(w*h/1e6).toFixed(1)}MP)${info?' · '+info:''}`);$('vf').style.opacity=.4;setTimeout(()=>$('vf').style.opacity=1,100);if(navigator.vibrate)navigator.vibrate(20)}
+ catch(e){note('Lỗi chụp: '+e.message)}finally{busy=false;$('shut').style.opacity=1}};
 $('thumb').onclick=()=>go('gal');
 
 /* ---------- THƯ VIỆN ---------- */
@@ -262,7 +344,9 @@ async function fullRender(){const im=await bmp(cur.orig),c=document.createElemen
 $('sSave').onclick=async()=>{if(!cur)return;const b=await fullRender();cur.cur=b;cur.p={...E};cur.thumb=await thumbOf(b);await dbPut(cur);$('gMsg').textContent='Đã lưu – ảnh gốc vẫn được giữ nguyên, bấm ↺ Gốc để quay lại.'};
 $('sDl').onclick=async()=>{if(!cur)return;const a=document.createElement('a');a.href=URL.createObjectURL(await fullRender());a.download='aps-edit-'+cur.id+'.jpg';a.click()};
 /* Gemini: gợi ý thông số & tạo ảnh (cần chạy ngoài môi trường trang đã publish) */
-$('gKey').value=localStorage.getItem('gk')||'AQ.Ab8RN6Lu0DB9wMmJ3WYIgZYNiTK_Aae8l0RYLdTvSH-cZ_Jbpw';$('gKey').onchange=e=>localStorage.setItem('gk',e.target.value);
+// Gemini API key: không nhúng hoặc lưu khóa bí mật trong mã HTML phía trình duyệt.
+$('gKey').value = '';
+$('gKey').onchange = () => {};
 const b64=b=>new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result.split(',')[1]);f.readAsDataURL(b)});
 async function gem(model,parts,cfg){const k=$('gKey').value;if(!k)throw Error('Hãy nhập Gemini API key');const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${k}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts}],generationConfig:cfg})});const j=await r.json();if(!r.ok)throw Error(j.error?.message||r.status);return j}
 $('gAdj').onclick=async()=>{if(!cur)return;$('gMsg').textContent='Gemini đang phân tích…';try{const j=await gem('gemini-2.5-flash',[{inline_data:{mime_type:'image/jpeg',data:await b64(cur.orig)}},{text:`Bạn là nhiếp ảnh gia chuyên nghiệp. ${$('gPr').value||'Chỉnh ảnh đẹp tự nhiên.'} Trả về JSON với các khoá ex(-3..3),ct,hl,sh,tp,sa(-100..100),vg(0..100).`}],{responseMimeType:'application/json'});
