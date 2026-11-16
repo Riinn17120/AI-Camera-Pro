@@ -15,7 +15,11 @@ button,select{font:inherit;color:var(--tx);cursor:pointer}
 /* CAMERA (Oppo 60%) */
 .vf{position:relative;flex:1;min-height:300px;background:#05070b;overflow:hidden;max-width:620px;width:100%;margin:10px auto 0;border:1px solid #ffffff12;border-radius:22px;box-shadow:0 18px 55px #0008;touch-action:pan-y}
 .vf video,.vf canvas.fx,.vf canvas.demo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .25s}
-#ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}\n.focus-ring{position:absolute;width:54px;height:54px;border:1.5px solid #f2d69b;border-radius:12px;z-index:4;pointer-events:none;display:none;transform:translate(-50%,-50%);filter:drop-shadow(0 2px 5px #000);animation:focusPulse .75s ease-out}\n.focus-ring:before,.focus-ring:after{content:"";position:absolute;background:#f2d69b}\n.focus-ring:before{width:1px;height:12px;left:50%;top:-7px}.focus-ring:after{height:1px;width:12px;top:50%;left:-7px}\n@keyframes focusPulse{0%{opacity:.4;scale:.78}35%{opacity:1;scale:1.08}100%{opacity:.9;scale:1}}
+#ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.focus-ring{position:absolute;width:54px;height:54px;border:1.5px solid #f2d69b;border-radius:50%;z-index:4;pointer-events:none;display:none;transform:translate(-50%,-50%);filter:drop-shadow(0 2px 5px #000);animation:focusPulse .75s ease-out}
+.focus-ring:before,.focus-ring:after{content:"";position:absolute;background:#f2d69b}\n.focus-ring:before{width:1px;height:12px;left:50%;top:-7px}.focus-ring:after{height:1px;width:12px;top:50%;left:-7px}
+@keyframes focusPulse{0%{opacity:.4;scale:.78}35%{opacity:1;scale:1.08}100%{opacity:.9;scale:1}}
+@media (pointer:fine){.focus-ring{border-radius:10px}}
 .top{position:absolute;top:8px;left:10px;right:10px;display:flex;justify-content:space-between;align-items:center;z-index:3}
 .pill{background:#111722bd;border:1px solid #ffffff1b;border-radius:20px;padding:7px 12px;font-size:12px;backdrop-filter:blur(14px);box-shadow:0 4px 16px #0004}
 .sug{position:absolute;left:50%;top:52px;transform:translateX(-50%);background:#d8b77ae8;color:#17130b;font-weight:700;border-radius:20px;padding:7px 15px;font-size:12px;z-index:3;white-space:nowrap;transition:.2s;box-shadow:0 5px 20px #0005}
