@@ -142,7 +142,9 @@ const bmp=b=>new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.src=URL.cre
 const blobOf=(c,q=.93)=>new Promise(r=>c.toBlob(r,'image/jpeg',q));
 
 /* ---------- CAMERA ---------- */
-const vid=$('vid'),demo=$('demo'),ov=$('ov');const RES={FHD:{w:1920,h:1440,cap:1920},'4K':{w:4096,h:3072,cap:4096},'8K':{w:8192,h:6144,cap:8192}};
+const vid=$('vid'),demo=$('demo'),ov=$('ov');
+// Kích thước yêu cầu theo chuẩn phổ biến 16:9; camera có thể trả về kích thước khác.
+const RES={FHD:{w:1920,h:1080,cap:1920},'4K':{w:3840,h:2160,cap:3840},'8K':{w:7680,h:4320,cap:7680}};
 let stream,track,ic,photoCaps,facing='environment',lenses=[],curLens=1,digital=1,mode='photo',aiOn=false,gridOn=true,P={ev:0,iso:100,wb:5500,ct:0},resK=RES[localStorage.getItem('res')]?localStorage.getItem('res'):'4K',baseNote='';
 const note=t=>$('camNote').textContent=t;
 $('bRes').textContent='📐 '+resK;$('bRes').onclick=()=>{resK=resK==='FHD'?'4K':resK==='4K'?'8K':'FHD';localStorage.setItem('res',resK);$('bRes').textContent='📐 '+resK;if(stream)startCam()};
@@ -151,8 +153,10 @@ async function startCam(){try{stream&&stream.getTracks().forEach(t=>t.stop());F.
  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:R.w},height:{ideal:R.h}},audio:false});
  vid.srcObject=stream;await vid.play();vid.style.display='block';demo.style.display='none';track=stream.getVideoTracks()[0];
  ic=window.ImageCapture?new ImageCapture(track):null;photoCaps=null;if(ic)try{photoCaps=await ic.getPhotoCapabilities()}catch(_){}
- await detectLenses();const st=track.getSettings(),hi=photoCaps&&photoCaps.imageWidth?` · ảnh tĩnh tối đa ${photoCaps.imageWidth.max}×${photoCaps.imageHeight.max}`:'';
- baseNote=`Luồng camera ${st.width}×${st.height}${hi}`;note(baseNote)}
+ await detectLenses();const st=track.getSettings(),actualW=st.width||vid.videoWidth,actualH=st.height||vid.videoHeight;
+ const hi=photoCaps&&photoCaps.imageWidth&&photoCaps.imageHeight?` · ảnh tĩnh tối đa ${photoCaps.imageWidth.max}×${photoCaps.imageHeight.max}`:'';
+ const meets=Math.max(actualW,actualH)>=R.w&&Math.min(actualW,actualH)>=R.h;
+ baseNote=`Yêu cầu ${resK} · luồng thực tế ${actualW}×${actualH}${hi}${meets?'':' · camera không đạt độ phân giải yêu cầu'}`;note(baseNote)}
  catch(e){note('Không mở được camera (quyền bị chặn?). Đang dùng cảnh mẫu – bạn vẫn có thể thử khung hình AI.')}}
 /* Tele / không tele: dò thấu kính thật, thiếu thì dùng zoom phần cứng, rồi zoom số */
 async function detectLenses(){const devs=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='videoinput'),cap=track.getCapabilities?track.getCapabilities():{};
@@ -288,7 +292,9 @@ let busy=false;const tick=()=>new Promise(r=>setTimeout(r,0));
 const nextFrame=s=>Promise.race([new Promise(r=>s.requestVideoFrameCallback?s.requestVideoFrameCallback(()=>r()):setTimeout(r,70)),new Promise(r=>setTimeout(r,250))]);
 function meanLuma(s){sx.drawImage(s,0,0,96,128);const d=sx.getImageData(0,0,96,128).data;let m=0;for(let i=0;i<d.length;i+=4)m+=.3*d[i]+.59*d[i+1]+.11*d[i+2];return m/(d.length/4)}
 const hiOK=()=>!!(ic&&photoCaps&&photoCaps.imageWidth&&photoCaps.imageWidth.max>(track.getSettings().width||0)*1.15);
-async function hiResShot(cr,R){const pc=photoCaps,Wv=vid.videoWidth,Hv=vid.videoHeight,iw=clamp(R.cap,pc.imageWidth.min,pc.imageWidth.max),ih=clamp(Math.round(R.cap*.75),pc.imageHeight.min,pc.imageHeight.max);
+async function hiResShot(cr,R){const pc=photoCaps,Wv=vid.videoWidth,Hv=vid.videoHeight;
+ const targetW=R.cap,targetH=Math.round(R.cap*Hv/Wv);
+ const iw=clamp(targetW,pc.imageWidth.min,pc.imageWidth.max),ih=clamp(targetH,pc.imageHeight.min,pc.imageHeight.max);
  const blob=await ic.takePhoto({imageWidth:iw,imageHeight:ih}),im=await createImageBitmap(blob,{imageOrientation:'from-image'});
  if(Math.abs(im.width/im.height-Wv/Hv)>.03)throw Error('lệch tỉ lệ');
  const f=im.width/Wv,sw=cr[2]*f,sh=cr[3]*f,k=Math.min(1,R.cap/Math.max(sw,sh)),w=Math.round(sw*k),h=Math.round(sh*k),c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,cr[0]*f,cr[1]*f,sw,sh,0,0,w,h);return c}
