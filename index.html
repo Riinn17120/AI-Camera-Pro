@@ -47,6 +47,13 @@ input[type=range]{width:100%;accent-color:var(--ac)}
 .grid div{aspect-ratio:1;background:#222 center/cover;position:relative;cursor:pointer}
 .grid span{position:absolute;right:4px;bottom:4px;font-size:10px;background:#0009;border-radius:4px;padding:1px 4px}
 .empty{padding:60px 20px;text-align:center;color:var(--mu)}
+/* Gallery preview: xem ảnh trước, chỉ mở Studio khi người dùng chủ động chọn */
+.viewer{position:fixed;inset:0;background:#050506f5;z-index:20;display:none;flex-direction:column;align-items:center;justify-content:center;padding:18px}
+.viewer.on{display:flex}
+.viewer img{max-width:100%;max-height:calc(100% - 110px);object-fit:contain}
+.viewer .vbar{width:min(100%,560px);display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px}
+.viewer .vbar .btn{padding:10px 16px}
+.viewer .vclose{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:14px;border:0;border-radius:50%;width:40px;height:40px;background:#25262b;color:white;font-size:22px}
 /* STUDIO (Lightroom 25%) */
 .st{display:grid;grid-template-columns:minmax(0,1fr) 300px;flex:1;min-height:0}
 @media(max-width:780px){.st{grid-template-columns:1fr;grid-template-rows:minmax(240px,45%) 1fr}}
@@ -106,6 +113,11 @@ input[type=range]{width:100%;accent-color:var(--ac)}
 <div class="gh"><h2>Thư viện</h2><button class="gb" id="bImp">⬆ Nhập từ máy</button><button class="gb" id="bExp">⬇ Xuất tất cả</button><input type="file" id="fImp" accept="image/*" multiple hidden></div>
 <div id="galBody"></div>
 </section>
+<div class="viewer" id="imgViewer" aria-hidden="true">
+ <button class="vclose" id="vClose" aria-label="Đóng">×</button>
+ <img id="vImg" alt="Ảnh xem trước">
+ <div class="vbar"><span class="note" id="vInfo">Xem ảnh</span><button class="btn p" id="vEdit">✎ Chỉnh sửa ảnh</button></div>
+</div>
 
 <!-- ===== STUDIO ===== -->
 <section class="tab" id="t-stu">
@@ -145,9 +157,34 @@ const blobOf=(c,q=.93)=>new Promise(r=>c.toBlob(r,'image/jpeg',q));
 const vid=$('vid'),demo=$('demo'),ov=$('ov');
 // Kích thước yêu cầu theo chuẩn phổ biến 16:9; camera có thể trả về kích thước khác.
 const RES={FHD:{w:1920,h:1080,cap:1920},'4K':{w:3840,h:2160,cap:3840},'8K':{w:7680,h:4320,cap:7680}};
-let stream,track,ic,photoCaps,facing='environment',lenses=[],curLens=1,digital=1,mode='photo',aiOn=false,gridOn=true,P={ev:0,iso:100,wb:5500,ct:0},resK=RES[localStorage.getItem('res')]?localStorage.getItem('res'):'4K',baseNote='';
+let stream,track,ic,photoCaps,camCaps={},hardwareEV=false,facing='environment',lenses=[],curLens=1,digital=1,mode='photo',aiOn=false,gridOn=true,P={ev:0,iso:100,wb:5500,ct:0},resK=RES[localStorage.getItem('res')]?localStorage.getItem('res'):'4K',baseNote='';
 const note=t=>$('camNote').textContent=t;
 $('bRes').textContent='📐 '+resK;$('bRes').onclick=()=>{resK=resK==='FHD'?'4K':resK==='4K'?'8K':'FHD';localStorage.setItem('res',resK);$('bRes').textContent='📐 '+resK;if(stream)startCam()};
+
+function readCameraCaps(){
+ try{camCaps=track&&track.getCapabilities?track.getCapabilities():{}}catch(_){camCaps={}}
+ const rows=[['pEV','oEV','exposureCompensation','EV'],['pISO','oISO','iso','ISO'],['pWB','oWB','colorTemperature','WB']];
+ hardwareEV=!!camCaps.exposureCompensation;
+ rows.forEach(([input,out,key,label])=>{
+  const el=$(input),cap=camCaps[key],supported=!!(cap&&typeof cap.min==='number'&&typeof cap.max==='number');
+  el.disabled=!supported;
+  el.title=supported?`${label} phần cứng: ${cap.min}–${cap.max}`:`Thiết bị/trình duyệt không hỗ trợ điều khiển ${label} thật`;
+  if(supported){el.min=cap.min;el.max=cap.max;if(key==='exposureCompensation')el.step=cap.step||.1;else el.step=key==='iso'?Math.max(1,cap.step||50):Math.max(50,cap.step||100);
+   P[key==='exposureCompensation'?'ev':key==='iso'?'iso':'wb']=clamp(P[key==='exposureCompensation'?'ev':key==='iso'?'iso':'wb'],cap.min,cap.max);
+  }
+  $(out).textContent=el.disabled?'N/A':String(P[key==='exposureCompensation'?'ev':key==='iso'?'iso':'wb']);
+ });
+ $('camNote').textContent += ` · Điều khiển thật: EV ${hardwareEV?'có':'không'}, ISO ${camCaps.iso?'có':'không'}, WB ${camCaps.colorTemperature?'có':'không'}`;
+ syncPro();
+ if(camCaps.iso)applyRealCameraControl('iso',P.iso);
+ if(camCaps.colorTemperature)applyRealCameraControl('colorTemperature',P.wb);
+ if(hardwareEV)applyRealCameraControl('exposureCompensation',P.ev);
+}
+async function applyRealCameraControl(key,value){
+ if(!track||!camCaps[key])return false;
+ try{await track.applyConstraints({advanced:[{[key]:value}]});return true}catch(_){return false}
+}
+
 let tt=0;setInterval(()=>{if(stream)return;const c=demo.getContext('2d'),w=480,h=640,g=c.createLinearGradient(0,0,0,h);g.addColorStop(0,'#5b8def');g.addColorStop(.55,'#ffb27a');g.addColorStop(1,'#2d3b2a');c.fillStyle=g;c.fillRect(0,0,w,h);const x=170+Math.sin(tt)*50;c.fillStyle='#e8d7c3';c.beginPath();c.arc(x,260,38,0,7);c.fill();c.fillRect(x-30,300,60,150);c.fillStyle='#222';c.beginPath();c.arc(x-12,254,4,0,7);c.arc(x+12,254,4,0,7);c.fill();tt+=.04},60);
 async function startCam(){try{stream&&stream.getTracks().forEach(t=>t.stop());F.on=false;sg.p=null;sg.hold=0;const R=RES[resK];
  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:R.w},height:{ideal:R.h}},audio:false});
@@ -156,7 +193,7 @@ async function startCam(){try{stream&&stream.getTracks().forEach(t=>t.stop());F.
  await detectLenses();const st=track.getSettings(),actualW=st.width||vid.videoWidth,actualH=st.height||vid.videoHeight;
  const hi=photoCaps&&photoCaps.imageWidth&&photoCaps.imageHeight?` · ảnh tĩnh tối đa ${photoCaps.imageWidth.max}×${photoCaps.imageHeight.max}`:'';
  const meets=Math.max(actualW,actualH)>=R.w&&Math.min(actualW,actualH)>=R.h;
- baseNote=`Yêu cầu ${resK} · luồng thực tế ${actualW}×${actualH}${hi}${meets?'':' · camera không đạt độ phân giải yêu cầu'}`;note(baseNote)}
+ baseNote=`Yêu cầu ${resK} · luồng thực tế ${actualW}×${actualH}${hi}${meets?'':' · camera không đạt độ phân giải yêu cầu'}`;note(baseNote);readCameraCaps()}
  catch(e){note('Không mở được camera (quyền bị chặn?). Đang dùng cảnh mẫu – bạn vẫn có thể thử khung hình AI.')}}
 /* Tele / không tele: dò thấu kính thật, thiếu thì dùng zoom phần cứng, rồi zoom số */
 async function detectLenses(){const devs=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='videoinput'),cap=track.getCapabilities?track.getCapabilities():{};
@@ -171,18 +208,30 @@ $('lens').onclick=async e=>{const i=e.target.dataset.i;if(i==null)return;const l
  if(l.z>1){if(l.hw&&track){try{await track.applyConstraints({advanced:[{zoom:l.z}]});$('camNote').textContent='Zoom quang/phần cứng '+l.t;return}catch(_){}}
   digital=l.z;$('camNote').textContent=l.tele?'':'Máy không có tele → zoom số '+l.t+' (cắt khung, chất lượng giảm)'}else $('camNote').textContent='';
  applyView()};
-function applyView(){const f=`brightness(${(mode==='night'?1.5:1)*Math.pow(2,P.ev*.7)*Math.pow(P.iso/100,.25)}) contrast(${1+P.ct/100}) sepia(${clamp((5500-P.wb)/6000,0,.5)}) hue-rotate(${clamp((P.wb-5500)/60,-40,0)}deg)`;
- [vid,demo].forEach(e=>{e.style.filter=f})}
+function applyView(){
+ // Chỉ giữ tương phản ở dạng xem trước; ISO/WB không còn giả lập bằng CSS.
+ // EV chỉ dùng bộ lọc dự phòng nếu camera không có điều khiển bù phơi sáng phần cứng.
+ const evFallback=hardwareEV?1:Math.pow(2,P.ev);
+ const f=`brightness(${evFallback}) contrast(${1+P.ct/100})`;
+ [vid,demo].forEach(e=>{e.style.filter=f});
+}
 $('flip').onclick=()=>{facing=facing==='environment'?'user':'environment';startCam()};
 $('bFlash').onclick=async e=>{const on=e.target.dataset.on!=='1';try{await track.applyConstraints({advanced:[{torch:on}]});e.target.dataset.on=on?1:0;e.target.textContent=on?'⚡ Bật':'⚡ Tắt'}catch(_){e.target.textContent='⚡ N/A'}};
 $('bGrid').onclick=()=>{gridOn=!gridOn};$('bAI').onclick=e=>{aiOn=!aiOn;F.on=false;sg.p=null;sg.q=null;sg.hold=0;sg.until=0;subj=null;e.target.classList.toggle('on',aiOn);e.target.textContent='✨ AI: '+(aiOn?'Bật':'Tắt');ui('✨ AI đang tìm chủ thể…',false)};
 $('modes').onclick=e=>{const m=e.target.dataset.m;if(!m)return;mode=m;document.querySelectorAll('#modes b').forEach(b=>b.classList.toggle('on',b===e.target));$('pro').classList.toggle('on',m==='pro');
  const pre={photo:[0,100,5500,0],portrait:[.2,100,5800,8],night:[0,100,5200,0],pro:[P.ev,P.iso,P.wb,P.ct]}[m];[P.ev,P.iso,P.wb,P.ct]=pre;syncPro();applyView();
- try{const ec=track&&track.getCapabilities&&track.getCapabilities().exposureCompensation;if(ec)track.applyConstraints({advanced:[{exposureCompensation:m==='night'?Math.min(ec.max,1.5):(m==='pro'?P.ev:0)}]}).catch(()=>{})}catch(_){}
+ if(camCaps.iso)applyRealCameraControl('iso',P.iso);
+ if(camCaps.colorTemperature)applyRealCameraControl('colorTemperature',P.wb);
+ if(hardwareEV)applyRealCameraControl('exposureCompensation',m==='night'?Math.min(camCaps.exposureCompensation.max,1.5):(m==='pro'?P.ev:0));
  note(m==='night'?'Chụp đêm: giữ máy yên ~2 giây, máy gộp nhiều khung để giảm nhiễu':baseNote)};
 const prs=[['pEV','ev','oEV',v=>(+v).toFixed(1)],['pISO','iso','oISO',v=>v],['pWB','wb','oWB',v=>v],['pCT','ct','oCT',v=>v]];
-function syncPro(){prs.forEach(([i,k,o,f])=>{$(i).value=P[k];$(o).textContent=f(P[k])})}
-prs.forEach(([i,k,o,f])=>$(i).oninput=()=>{P[k]=+$(i).value;$(o).textContent=f(P[k]);applyView();if(k==='ev'&&track)track.applyConstraints({advanced:[{exposureCompensation:P.ev}]}).catch(()=>{})});
+function syncPro(){prs.forEach(([i,k,o,f])=>{$(i).value=P[k];$(o).textContent=$(i).disabled?'N/A':f(P[k])})}
+prs.forEach(([i,k,o,f])=>$(i).oninput=async()=>{
+ P[k]=+$(i).value;$(o).textContent=f(P[k]);
+ if(k==='ev'){if(hardwareEV){const ok=await applyRealCameraControl('exposureCompensation',P.ev);if(!ok){hardwareEV=false;$(i).disabled=true;$(o).textContent='N/A';note('Camera từ chối EV phần cứng; EV sẽ dùng xử lý ảnh dự phòng')}}applyView()}
+ if(k==='iso'){const ok=await applyRealCameraControl('iso',P.iso);if(!ok){$(i).disabled=true;$(o).textContent='N/A';note('Thiết bị không cho phép chỉnh ISO thủ công')}}
+ if(k==='wb'){const ok=await applyRealCameraControl('colorTemperature',P.wb);if(!ok){$(i).disabled=true;$(o).textContent='N/A';note('Thiết bị không cho phép chỉnh nhiệt độ màu thủ công')}}
+});
 const src=()=>stream?vid:demo;
 
 /* ---------- Khung hình AI: GỢI Ý → bạn bấm Đồng ý → máy tự chuyển khung ---------- */
@@ -298,7 +347,7 @@ async function hiResShot(cr,R){const pc=photoCaps,Wv=vid.videoWidth,Hv=vid.video
  const blob=await ic.takePhoto({imageWidth:iw,imageHeight:ih}),im=await createImageBitmap(blob,{imageOrientation:'from-image'});
  if(Math.abs(im.width/im.height-Wv/Hv)>.03)throw Error('lệch tỉ lệ');
  const f=im.width/Wv,sw=cr[2]*f,sh=cr[3]*f,k=Math.min(1,R.cap/Math.max(sw,sh)),w=Math.round(sw*k),h=Math.round(sh*k),c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,cr[0]*f,cr[1]*f,sw,sh,0,0,w,h);return c}
-function adjust(c){const b=Math.pow(2,P.ev*.7)*Math.pow(P.iso/100,.25),ct=1+P.ct/100;if(Math.abs(b-1)<.01&&Math.abs(ct-1)<.01)return c;const c2=document.createElement('canvas');c2.width=c.width;c2.height=c.height;const x=c2.getContext('2d');x.filter=`brightness(${b}) contrast(${ct})`;x.drawImage(c,0,0);return c2}
+function adjust(c){const b=hardwareEV?1:Math.pow(2,P.ev),ct=1+P.ct/100;if(Math.abs(b-1)<.01&&Math.abs(ct-1)<.01)return c;const c2=document.createElement('canvas');c2.width=c.width;c2.height=c.height;const x=c2.getContext('2d');x.filter=`brightness(${b}) contrast(${ct})`;x.drawImage(c,0,0);return c2}
 $('shut').onclick=async()=>{if(busy)return;busy=true;$('shut').style.opacity=.5;
  try{const s=src(),R=RES[resK],cr=crop(s),L=Math.max(cr[2],cr[3]);let k=Math.min(1,R.cap/L),cv,info='';
   if(mode==='night'&&stream){k=Math.min(k,Math.sqrt(12.7e6/(cr[2]*cr[3])));const N=cr[2]*cr[3]*k*k>9e6?6:8,r=await stackShot(s,cr,k,{N,label:'Chụp đêm',skip:1,maxMad:35,thr:50,rc:4,T1:18,s1:2,T2:10,s2:1,tone:1,cs:1.12});cv=r.c;info=`xếp chồng ${r.used}/${N} khung`}
@@ -316,7 +365,27 @@ $('thumb').onclick=()=>go('gal');
 async function loadGal(){const a=(await dbAll()).sort((x,y)=>y.t-x.t),g=$('galBody');if(!a.length){g.innerHTML='<div class="empty">Chưa có ảnh. Chụp hoặc nhập ảnh từ máy.</div>';return}
  const days={};a.forEach(p=>{(days[new Date(p.t).toLocaleDateString('vi-VN',{weekday:'long',day:'numeric',month:'numeric'})]??=[]).push(p)});
  g.innerHTML=Object.entries(days).map(([d,l])=>`<div class="day">${d}</div><div class="grid">${l.map(p=>`<div data-id="${p.id}" style="background-image:url(${p.thumb})">${p.p?'<span>✎</span>':''}</div>`).join('')}</div>`).join('')}
-$('galBody').onclick=e=>{const id=e.target.dataset.id;if(id)openStudio(+id)};
+let viewerPhotoId=null;
+async function showPhotoPreview(id){
+ const photo=await dbGet(id);if(!photo)return;
+ viewerPhotoId=id;
+ const blob=photo.cur||photo.orig;
+ $('vImg').src=URL.createObjectURL(blob);
+ $('vInfo').textContent=`Ảnh ${photo.p?'đã chỉnh sửa':'gốc'} · chọn “Chỉnh sửa ảnh” nếu muốn mở Studio`;
+ $('imgViewer').classList.add('on');$('imgViewer').setAttribute('aria-hidden','false');
+}
+function closePhotoPreview(){
+ $('imgViewer').classList.remove('on');$('imgViewer').setAttribute('aria-hidden','true');
+ $('vImg').removeAttribute('src');viewerPhotoId=null;
+}
+$('galBody').onclick=e=>{
+ const tile=e.target.closest('[data-id]');
+ if(tile)showPhotoPreview(+tile.dataset.id);
+};
+$('vClose').onclick=closePhotoPreview;
+$('imgViewer').onclick=e=>{if(e.target===$('imgViewer'))closePhotoPreview()};
+$('vEdit').onclick=()=>{if(viewerPhotoId!==null){const id=viewerPhotoId;closePhotoPreview();openStudio(id)}};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('imgViewer').classList.contains('on'))closePhotoPreview()});
 $('bImp').onclick=()=>$('fImp').click();
 $('fImp').onchange=async e=>{for(const f of e.target.files){const id=Date.now()+Math.random()*1000|0;await dbPut({id,t:f.lastModified||id,orig:f,cur:f,thumb:await thumbOf(f),p:null,src:'import'})}loadGal()};
 $('bExp').onclick=async()=>{for(const p of await dbAll()){const a=document.createElement('a');a.href=URL.createObjectURL(p.cur);a.download='aps-'+p.id+'.jpg';a.click();await new Promise(r=>setTimeout(r,250))}};
@@ -328,7 +397,7 @@ SL.forEach(s=>$('sl'+s[6]).insertAdjacentHTML('beforeend',`<div class="sl"><span
 SL.forEach(s=>$('e_'+s[0]).oninput=()=>{E[s[0]]=+$('e_'+s[0]).value;$('o_'+s[0]).textContent=E[s[0]];queue()});
 const zero=()=>Object.fromEntries(SL.map(s=>[s[0],0]));
 function setE(o){E={...zero(),...o};SL.forEach(s=>{$('e_'+s[0]).value=E[s[0]];$('o_'+s[0]).textContent=E[s[0]]})}
-async function openStudio(id){cur=await dbGet(id);const im=await bmp(cur.orig),k=Math.min(1,1400/Math.max(im.width,im.height)),w=im.width*k|0,h=im.height*k|0;
+async function openStudio(id){cur=await dbGet(id);if(!cur)return;cmp=false;$('cvO').style.display='none';$('tagB').style.display='none';$('cmpR').style.display='none';const im=await bmp(cur.orig),k=Math.min(1,1400/Math.max(im.width,im.height)),w=im.width*k|0,h=im.height*k|0;
  for(const c of [$('cvA'),$('cvO')]){c.width=w;c.height=h}$('cvO').getContext('2d').drawImage(im,0,0,w,h);const a=$('cvA').getContext('2d');a.drawImage(im,0,0,w,h);base=a.getImageData(0,0,w,h);
  $('stEmpty').style.display='none';$('stk').style.display='block';setE(cur.p||{});go('stu');render()}
 function proc(src,dst,e,vgOn=true){const s=src.data,d=dst.data,w=src.width,h=src.height,ex=Math.pow(2,e.ex),c=1+e.ct/100,sa=1+e.sa/100,t=e.tp/100*30,hl=e.hl/100*.6,sh=e.sh/100*.6,vg=e.vg/100;
