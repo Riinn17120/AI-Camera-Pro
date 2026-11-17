@@ -1,80 +1,194 @@
-```html
-  <div class="note" id="batchSt"></div>
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI Photo Studio</title>
+<style>
+:root{color-scheme:dark;--bg:#090b10;--cd:#151923;--ln:#29303d;--tx:#f4f2ed;--mu:#9ba3b2;--ac:#d8b77a;--gn:#8fc9aa;--glass:#111722;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0}
+body{background:radial-gradient(ellipse at 50% -20%,#202a3b 0%,var(--bg) 55%);color:var(--tx);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column;letter-spacing:.01em}
+.tab{display:none;flex:1;min-height:0;overflow:auto}.tab.on{display:flex;flex-direction:column}
+nav{display:flex;border-top:1px solid #ffffff12;background:#0d1119ed;backdrop-filter:blur(18px);padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 -10px 30px #0003}
+nav button{flex:1;background:none;border:0;color:var(--mu);padding:10px 0;font:inherit;font-size:12px}
+nav button.on{color:var(--ac)}nav i{display:block;font-style:normal;font-size:20px;margin-bottom:2px}nav button{padding:11px 0 9px}
+button,select{font:inherit;color:var(--tx);cursor:pointer}
+/* CAMERA (Oppo 60%) */
+.vf{position:relative;flex:1;min-height:300px;background:#05070b;overflow:hidden;max-width:620px;width:100%;margin:10px auto 0;border:1px solid #ffffff12;border-radius:22px;box-shadow:0 18px 55px #0008;touch-action:pan-y}
+.vf video,.vf canvas.fx,.vf canvas.demo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .25s}
+#ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.focus-ring{position:absolute;width:54px;height:54px;border:1.5px solid #f2d69b;border-radius:50%;z-index:4;pointer-events:none;display:none;transform:translate(-50%,-50%);filter:drop-shadow(0 2px 5px #000);animation:focusPulse .75s ease-out}
+.focus-ring:before,.focus-ring:after{content:"";position:absolute;background:#f2d69b}
+.focus-ring:before{width:1px;height:12px;left:50%;top:-7px}.focus-ring:after{height:1px;width:12px;top:50%;left:-7px}
+@keyframes focusPulse{0%{opacity:.4;scale:.78}35%{opacity:1;scale:1.08}100%{opacity:.9;scale:1}}
+@media (pointer:fine){.focus-ring{border-radius:10px}}
+.top{position:absolute;top:8px;left:10px;right:10px;display:flex;justify-content:space-between;align-items:center;z-index:3}
+.pill{background:#111722bd;border:1px solid #ffffff1b;border-radius:20px;padding:7px 12px;font-size:12px;backdrop-filter:blur(14px);box-shadow:0 4px 16px #0004}
+.sug{position:absolute;left:50%;top:52px;transform:translateX(-50%);background:#d8b77ae8;color:#17130b;font-weight:700;border-radius:20px;padding:7px 15px;font-size:12px;z-index:3;white-space:nowrap;transition:.2s;box-shadow:0 5px 20px #0005}
+.sug.ok{background:#34d399cc}
+.sugbtn{position:absolute;left:50%;top:84px;transform:translateX(-50%);display:flex;gap:8px;z-index:3}
+.sugbtn button{border:0;border-radius:18px;padding:8px 18px;font-weight:700;font-size:13px;background:#34d399;color:#04210f}
+.sugbtn button.no{background:#000a;color:#fff;font-weight:500;backdrop-filter:blur(8px)}
+.lens{position:absolute;left:0;right:0;bottom:8px;display:flex;justify-content:center;gap:8px;z-index:3}
+.lens button{width:38px;height:38px;border-radius:50%;background:#0009;border:1px solid #fff3;font-size:12px}
+.lens button.on{color:var(--ac);border-color:var(--ac);transform:scale(1.12)}
+.ctrl{max-width:620px;width:100%;margin:0 auto;background:linear-gradient(180deg,#090b10,#111722);padding:12px 18px 16px;border-radius:0 0 22px 22px}
+.modes{display:flex;justify-content:center;gap:20px;color:var(--mu);margin-bottom:8px}
+.modes b{font-weight:500;cursor:pointer;padding:2px 0}.modes b.on{color:var(--ac);border-bottom:2px solid var(--ac)}
+.shutrow{display:flex;align-items:center;justify-content:space-between}
+.thumb{width:50px;height:50px;border-radius:14px;background:#222 center/cover;border:1px solid #ffffff30;box-shadow:0 5px 18px #0005}
+.shut{width:72px;height:72px;border-radius:50%;border:2px solid #f4e6c8;background:linear-gradient(145deg,#d8b77a,#f3e1b8);padding:5px;box-shadow:0 0 0 5px #d8b77a22,0 8px 25px #0007}.shut i{display:block;width:100%;height:100%;border-radius:50%;background:#fffaf0}.shut:active i{transform:scale(.88)}
+.flip{width:48px;height:48px;border-radius:50%;background:#202735;border:1px solid #ffffff18;font-size:20px}
+.pro{display:none;background:#000;border-top:1px solid var(--ln);padding:8px 14px;max-width:560px;margin:0 auto;width:100%}.pro.on{display:block}
+.pro .sl{display:grid;grid-template-columns:62px 1fr 56px;gap:8px;align-items:center;font:11px ui-monospace,monospace;color:var(--mu);margin:3px 0}
+.pro .sl output{color:var(--gn);text-align:right}
+#hist{width:100%;height:42px;background:#0a0a0c;border:1px solid var(--ln);border-radius:6px;margin-bottom:4px}
+input[type=range]{width:100%;accent-color:var(--ac)}
+/* GALLERY (Google Photos 5%) */
+.gh{padding:16px 16px;display:flex;gap:8px;align-items:center;position:sticky;top:0;background:#0b0f17ed;backdrop-filter:blur(16px);z-index:2;border-bottom:1px solid #ffffff10}
+.gh h2{margin:0;font-size:21px;flex:1;font-weight:650;letter-spacing:-.03em}
+.gb{background:#1a2230;border:1px solid #ffffff16;border-radius:20px;padding:7px 12px;font-size:12px;color:#e9e3d7}
+.day{padding:14px 16px 7px;color:var(--ac);font-size:12px;font-weight:650;letter-spacing:.04em}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:5px;padding:0 8px 10px}
+.grid div{aspect-ratio:1;background:#222 center/cover;position:relative;cursor:pointer;border-radius:9px;overflow:hidden;box-shadow:0 4px 14px #0004}
+.grid span{position:absolute;right:4px;bottom:4px;font-size:10px;background:#0009;border-radius:4px;padding:1px 4px}
+.empty{padding:60px 20px;text-align:center;color:var(--mu)}
+/* Gallery preview: xem ảnh trước, chỉ mở Studio khi người dùng chủ động chọn */
+.viewer{position:fixed;inset:0;background:#050506f5;z-index:20;display:none;flex-direction:column;align-items:center;justify-content:center;padding:18px}
+.viewer.on{display:flex}
+.viewer img{max-width:100%;max-height:calc(100% - 110px);object-fit:contain}
+.viewer .vbar{width:min(100%,560px);display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px}
+.viewer .vbar .btn{padding:10px 16px}
+.viewer .vclose{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:14px;border:0;border-radius:50%;width:40px;height:40px;background:#25262b;color:white;font-size:22px}
+/* STUDIO (Lightroom 25%) */
+.st{display:grid;grid-template-columns:minmax(0,1fr) 300px;flex:1;min-height:0}
+@media(max-width:780px){.st{grid-template-columns:1fr;grid-template-rows:minmax(220px,40%) minmax(0,1fr)}.pnl{border-left:0;border-top:1px solid #ffffff14;padding:13px 14px 24px}.cv{min-height:220px}.pnl .rw:first-child{position:sticky;top:-13px;z-index:4;background:#151b27ed;padding:7px 0 10px;margin-top:-7px;backdrop-filter:blur(12px)}.pnl .sl{grid-template-columns:76px 1fr 36px;margin:7px 0}.pnl input[type=range]{min-height:26px}.tag{top:10px}}
+.cv{position:relative;background:#050506;display:grid;place-items:center;overflow:hidden;min-height:0}
+.cv .stk{position:relative;max-width:100%;max-height:100%}
+.cv canvas{display:block;max-width:100%;max-height:100%}
+#cvO{position:absolute;inset:0;width:100%;height:100%}
+.tag{position:absolute;top:8px;background:#000a;border-radius:4px;padding:2px 8px;font-size:11px}
+.pnl{background:linear-gradient(180deg,#151b27,#10151e);border-left:1px solid #ffffff12;overflow:auto;padding:16px 15px}
+.pnl h4{margin:17px 0 7px;font-size:10px;letter-spacing:.15em;color:var(--ac);text-transform:uppercase}
+.pnl .sl{display:grid;grid-template-columns:78px 1fr 34px;gap:6px;align-items:center;font-size:12px;color:#c5c7cf;margin:2px 0}
+.pnl .sl output{text-align:right;color:var(--ac);font-size:11px}
+.pnl input[type=range]{accent-color:#8ab4ff}
+.btn{background:#202838;border:1px solid #ffffff18;border-radius:11px;padding:9px 12px;font-size:12px;color:#eee9df;transition:.18s}.btn.p{background:linear-gradient(135deg,#d8b77a,#f0d8a8);color:#1c170d;border-color:#e6c98f;font-weight:750;box-shadow:0 5px 16px #d8b77a22}
+.rw{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.pnl input[type=text],.pnl input[type=password],.pnl textarea{width:100%;background:#0b1019;border:1px solid #ffffff1c;border-radius:11px;color:var(--tx);padding:10px;font:inherit;font-size:12px;margin:4px 0}
+.note{font-size:11px;color:var(--mu)}
+.vf video,.vf canvas.demo{transition:none;transform-origin:0 0;will-change:transform}
+.pill.on{background:var(--ac);color:#190a00;font-weight:700}
+#bAI{padding:8px 14px}
+@media(orientation:landscape) and (max-height:620px){
+#t-cam.on{flex-direction:row}.vf{max-width:none;margin:0}
+.top{flex-direction:column;align-items:flex-start;right:auto;gap:8px}.sug{top:8px}.sugbtn{top:44px}
+.lens{left:auto;right:10px;top:0;bottom:0;flex-direction:column-reverse;justify-content:center}
+.ctrl{max-width:none;width:150px;margin:0;display:flex;flex-direction:column;justify-content:center;gap:12px;padding:8px}
+.modes{flex-direction:column;align-items:center;gap:10px;margin:0}.shutrow{flex-direction:column;gap:14px}
+.pro{max-width:230px;margin:0;border-top:0;border-left:1px solid var(--ln);order:2;overflow:auto}
+}
+
+/* ===== AI nâng cấp ===== */
+.btn:disabled{opacity:.4;cursor:default}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid #ffffff1c;background:#202838;color:#eee9df;border-radius:16px;padding:6px 12px;font-size:12px}.chip.on{background:var(--ac);color:#1c170d;font-weight:700;border-color:var(--ac)}.chip small{opacity:.6}
+.sugbtn{width:max-content;max-width:94%}.sugbtn button{white-space:nowrap}
+.scene{position:absolute;left:50%;bottom:54px;transform:translateX(-50%);width:max-content;max-width:92%;display:none;align-items:center;gap:6px;background:#111722d9;border:1px solid #ffffff1b;border-radius:18px;padding:5px 6px 5px 12px;font-size:12px;z-index:3;backdrop-filter:blur(14px);box-shadow:0 4px 16px #0004}
+.scene button{border:0;border-radius:14px;padding:5px 10px;font-size:12px;background:#202838;color:#eee9df;flex:none}.scene #sceneGo{background:var(--ac);color:#1c170d;font-weight:700}
+.gsearch{padding:10px 14px 0}.gsearch input{width:100%;background:#0b1019;border:1px solid #ffffff1c;border-radius:20px;color:var(--tx);padding:9px 14px;font:inherit;font-size:13px}
+#gTags{padding:8px 14px 0}
+.grid span.ai{left:4px;top:4px;right:auto;bottom:auto;background:#d8b77aee;color:#1c170d;font-weight:700}
+.aiOut{background:#0b1019;border:1px solid #ffffff14;border-radius:12px;padding:10px;font-size:12px;margin:6px 0}
+.tags{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0}.tags span{background:#202838;border-radius:12px;padding:2px 9px;font-size:11px;color:var(--ac)}
+.aipage{max-width:640px;width:100%;margin:0 auto;padding:16px 14px 28px}
+.aipage h2{margin:4px 0 12px;font-size:21px;font-weight:650;letter-spacing:-.03em}
+.card{background:linear-gradient(180deg,#151b27,#10151e);border:1px solid #ffffff12;border-radius:16px;padding:14px;margin-bottom:12px}
+.card h3{margin:0 0 8px;font-size:11px;letter-spacing:.14em;color:var(--ac);text-transform:uppercase}
+.aipage input[type=text],.aipage input[type=password],.aipage textarea,.aipage select{width:100%;background:#0b1019;border:1px solid #ffffff1c;border-radius:11px;color:var(--tx);padding:10px;font:inherit;font-size:13px;margin:4px 0}
+.chk{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:#c5c7cf;margin:6px 0}.chk input{margin-top:3px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.aipage ul{margin:4px 0;padding-left:18px;list-style:none}.aipage li{font-size:12px;color:#c5c7cf;margin:3px 0;margin-left:-18px}
+</style></head><body>
+
+<!-- ===== CAMERA ===== -->
+<section class="tab on" id="t-cam">
+<div class="vf" id="vf">
+ <canvas class="demo" id="demo" width="480" height="640"></canvas>
+ <video id="vid" playsinline muted style="display:none"></video>
+ <canvas id="ov"></canvas><div class="focus-ring" id="focusRing" aria-hidden="true"></div>
+ <div class="top"><button class="pill" id="bFlash">⚡ Tắt</button><button class="pill" id="bGrid">▦ Lưới</button><button class="pill" id="bRes">📐 4K</button><button class="pill" id="bAI">✨ AI: Tắt</button></div>
+ <div class="sug" id="sug" style="display:none"></div><div class="sugbtn" id="sugBtn" style="display:none"></div>
+ <div class="scene" id="scene"><span id="sceneTxt">Đang nhận diện cảnh…</span><button id="sceneGo" style="display:none"></button><button id="sceneAsk" title="Nhận diện chi tiết bằng Gemini (gửi 1 khung hình)">🔍 Hỏi AI</button><button id="sceneNo" style="display:none">✕</button></div>
+ <div class="lens" id="lens"></div>
+</div>
+<div class="pro" id="pro">
+ <canvas id="hist" width="300" height="42"></canvas>
+ <div class="sl"><span>EV</span><input type="range" id="pEV" min="-3" max="3" step=".1" value="0"><output id="oEV">0.0</output></div>
+ <div class="sl"><span>ISO</span><input type="range" id="pISO" min="100" max="3200" step="100" value="100"><output id="oISO">100</output></div>
+ <div class="sl"><span>WB (K)</span><input type="range" id="pWB" min="2500" max="8000" step="100" value="5500"><output id="oWB">5500</output></div>
+ <div class="sl"><span>Tương phản</span><input type="range" id="pCT" min="-50" max="50" value="0"><output id="oCT">0</output></div>
+</div>
+<div class="ctrl">
+ <div class="modes" id="modes"><b data-m="photo" class="on">Ảnh</b><b data-m="portrait">Chân dung</b><b data-m="night">Đêm</b><b data-m="pro">Pro</b></div>
+ <div class="shutrow"><div class="thumb" id="thumb"></div><button class="shut" id="shut"><i></i></button><button class="flip" id="flip">🔄</button></div>
+ <div class="note" id="camNote" style="text-align:center;margin-top:6px"></div>
+</div>
+</section>
+
+<!-- ===== THƯ VIỆN ===== -->
+<section class="tab" id="t-gal">
+<div class="gh"><h2>Thư viện</h2><button class="gb" id="bGenNew">✨ Tạo ảnh</button><button class="gb" id="bImp">⬆ Nhập từ máy</button><button class="gb" id="bExp">⬇ Xuất tất cả</button><input type="file" id="fImp" accept="image/*" multiple hidden></div>
+<div class="gsearch"><input type="search" id="gQ" placeholder="Tìm theo thẻ, cảnh, mô tả…"></div><div class="chips" id="gTags" style="display:none"></div>
+<div id="galBody"></div>
+</section>
+<div class="viewer" id="imgViewer" aria-hidden="true">
+ <button class="vclose" id="vClose" aria-label="Đóng">×</button>
+ <img id="vImg" alt="Ảnh xem trước">
+ <div class="vbar"><span class="note" id="vInfo">Xem ảnh</span><button class="btn p" id="vEdit">✎ Chỉnh sửa ảnh</button></div>
+</div>
+
+<!-- ===== STUDIO ===== -->
+<section class="tab" id="t-stu">
+<div class="st">
+ <div class="cv" id="cvbox"><div class="empty" id="stEmpty">Chọn ảnh từ Thư viện để bắt đầu hậu kỳ.<br>Ảnh gốc luôn được bảo toàn.</div>
+ <div class="stk" id="stk" style="display:none"><canvas id="cvA"></canvas><canvas id="cvO" style="display:none"></canvas><span class="tag" id="tagA" style="right:8px">Sau</span><span class="tag" id="tagB" style="left:8px;display:none">Trước</span></div></div>
+ <div class="pnl" id="pnl">
+  <div class="rw"><button class="btn p" id="sAuto">✨ Tự chỉnh AI</button><button class="btn" id="sCmp">◐ So sánh</button><button class="btn" id="sRst">↺ Gốc</button><button class="btn" id="sUndo" title="Hoàn tác" disabled>↶</button><button class="btn" id="sRedo" title="Làm lại" disabled>↷</button></div>
+  <input type="range" id="cmpR" min="0" max="100" value="50" style="display:none">
+  <h4>Phong cách AI</h4>
+  <div class="chips" id="presets"></div>
+  <div class="sl"><span>Cường độ</span><input type="range" id="pK" min="0" max="100" value="70"><output id="oK">70</output></div>
+  <h4>Ánh sáng</h4><div id="slL"></div><h4>Màu sắc</h4><div id="slC"></div><h4>Chi tiết</h4><div id="slD"></div>
+  <h4>Bố cục</h4>
+  <div class="rw"><button class="btn" id="cAI">✂ Cắt khung AI</button><button class="btn" id="cRst">⛶ Bỏ cắt</button></div>
+  <h4>Trợ lý AI (Gemini)</h4>
+  <textarea id="gPr" rows="2" placeholder="VD: làm ấm ánh hoàng hôn, xoá người ở nền…"></textarea>
+  <div class="rw"><button class="btn" id="gAdj">AI gợi ý thông số</button><button class="btn" id="gAna">🔍 Phân tích ảnh</button></div>
+  <div class="aiOut" id="aiOut" style="display:none"></div>
+  <h4>Sáng tạo &amp; thay đổi nội dung</h4>
+  <div class="chips" id="kinds"></div><div class="note" id="kHint"></div>
+  <div class="rw"><button class="btn p" id="gGen">✦ Tạo ảnh AI</button><button class="btn" id="gCancel" style="display:none">Dừng</button></div>
+  <div class="note" id="gMsg">Tính năng Gemini gửi ảnh (đã thu nhỏ) tới Google. Nhập khoá và đồng ý ở tab AI.</div>
+  <div class="rw" style="margin-top:14px"><button class="btn p" id="sSave">💾 Lưu bản chỉnh</button><button class="btn" id="sDl">⬇ Tải JPG</button></div>
  </div>
- <div class="card"><h3>Quyền riêng tư</h3><p class="note">Ảnh được lưu trong IndexedDB trên thiết bị hiện tại. Không có đồng bộ đám mây. Các tính năng Gemini chỉ gửi ảnh khi bạn đã nhập khoá, đồng ý và chủ động bấm nút. Không nhập API key vào website công khai nếu chưa hiểu rủi ro.</p></div>
 </div></section>
 
-<nav><button class="on" data-t="cam"><i>📷</i>Camera</button><button data-t="gal"><i>🖼</i>Thư viện</button><button data-t="stu"><i>🎛</i>Studio</button><button data-t="ai"><i>🤖</i>AI</button></nav>
-
-<script>
-const $=id=>document.getElementById(id),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-/* ---------- Tab ---------- */
-document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button,.tab').forEach(e=>e.classList.remove('on'));b.classList.add('on');$('t-'+b.dataset.t).classList.add('on');if(b.dataset.t==='gal')loadGal()});
-const go=t=>document.querySelector(`nav [data-t=${t}]`).click();
-
-/* ---------- IndexedDB (đồng bộ thư viện với máy, không Supabase) ---------- */
-let db;const dbp=new Promise(r=>{const q=indexedDB.open('aps',1);q.onupgradeneeded=()=>q.result.createObjectStore('p',{keyPath:'id'});q.onsuccess=()=>{db=q.result;r()}});
-const tx=(m,f)=>dbp.then(()=>new Promise(r=>{const t=db.transaction('p',m),s=t.objectStore('p'),q=f(s);t.oncomplete=()=>r(q&&q.result)}));
-const dbAll=()=>tx('readonly',s=>s.getAll()),dbPut=o=>tx('readwrite',s=>s.put(o)),dbGet=i=>tx('readonly',s=>s.get(i));
-const thumbOf=async b=>{const im=await bmp(b),c=document.createElement('canvas'),k=300/Math.max(im.width,im.height);c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);return c.toDataURL('image/jpeg',.7)};
-const bmp=b=>new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.src=URL.createObjectURL(b)});
-const blobOf=(c,q=.93)=>new Promise(r=>c.toBlob(r,'image/jpeg',q));
-const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-
-/* ---------- Camera ---------- */
-let stream=null,track=null,facing='environment',gridOn=false,aiOn=false,busy=false,mode='photo',camCaps={},P={ev:0,iso:100,wb:5500,ct:0},hardwareEV=false;
-let baseNote='Camera sẵn sàng';
-const note=s=>$('camNote').textContent=s;
-function ui(s,show=true){$('sug').textContent=s;$('sug').style.display=show?'block':'none'}
-function sceneReset(){ $('scene').style.display='none';$('sceneTxt').textContent='Đang nhận diện cảnh…' }
-async function startCam(){
- try{
-  if(stream)stream.getTracks().forEach(t=>t.stop());
-  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:3840},height:{ideal:2160}},audio:false});
-  track=stream.getVideoTracks()[0];$('vid').srcObject=stream;$('vid').style.display='block';$('demo').style.display='none';await $('vid').play();
-  camCaps=track.getCapabilities?track.getCapabilities():{};
-  hardwareEV=!!camCaps.exposureCompensation;
-  note('Camera đang hoạt động');
-  if(camCaps.zoom){$('lens').innerHTML=[1,2,3].map(z=>`<button data-z="${z}">${z}×</button>`).join('');$('lens').onclick=e=>{const z=+e.target.dataset.z;if(!z)return;track.applyConstraints({advanced:[{zoom:Math.min(camCaps.zoom.max,Math.max(camCaps.zoom.min,z))}]});document.querySelectorAll('#lens button').forEach(b=>b.classList.toggle('on',+b.dataset.z===z))}}
-  drawOverlay();
- }catch(e){note('Không mở được camera: '+e.message);$('vid').style.display='none';$('demo').style.display='block'}
-}
-function drawOverlay(){
- const c=$('ov'),r=$('vf').getBoundingClientRect(),d=devicePixelRatio||1;c.width=r.width*d;c.height=r.height*d;
- const x=c.getContext('2d');x.scale(d,d);x.clearRect(0,0,r.width,r.height);
- if(gridOn){x.strokeStyle='#ffffff55';x.lineWidth=1;for(let i=1;i<3;i++){x.beginPath();x.moveTo(r.width*i/3,0);x.lineTo(r.width*i/3,r.height);x.stroke();x.beginPath();x.moveTo(0,r.height*i/3);x.lineTo(r.width,r.height*i/3);x.stroke()}}
-}
-$('bGrid').onclick=()=>{gridOn=!gridOn;drawOverlay()};
-$('flip').onclick=()=>{facing=facing==='environment'?'user':'environment';startCam()};
-$('bFlash').onclick=async e=>{const on=e.target.dataset.on!=='1';try{await track.applyConstraints({advanced:[{torch:on}]});e.target.dataset.on=on?1:0;e.target.textContent=on?'⚡ Bật':'⚡ Tắt'}catch(_){e.target.textContent='⚡ N/A'}};
-$('bAI').onclick=e=>{aiOn=!aiOn;e.target.classList.toggle('on',aiOn);e.target.textContent='✨ AI: '+(aiOn?'Bật':'Tắt');ui('✨ AI đang tìm chủ thể…',false);sceneReset()};
-$('bRes').onclick=()=>note('Độ phân giải phụ thuộc camera và trình duyệt của thiết bị.');
-$('vf').addEventListener('pointerdown',focusAt,{passive:true});
-async function focusAt(e){
- const r=$('vf').getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
- const ring=$('focusRing');ring.style.left=x+'px';ring.style.top=y+'px';ring.style.display='block';
- setTimeout(()=>ring.style.display='none',850);
- if(!track)return;
- const nx=x/r.width,ny=y/r.height,advanced={},caps=track.getCapabilities?track.getCapabilities():{};
- if(caps.pointsOfInterest)advanced.pointsOfInterest=[{x:nx,y:ny}];
- if(caps.focusMode&&caps.focusMode.includes('single-shot'))advanced.focusMode='single-shot';
- else if(caps.focusMode&&caps.focusMode.includes('continuous'))advanced.focusMode='continuous';
- if(Object.keys(advanced).length){
-  try{await track.applyConstraints({advanced:[advanced]});note('Đã lấy nét tại vị trí bạn chạm');}
-  catch(_){note('Thiết bị không cho phép điều khiển lấy nét bằng trình duyệt');}
- }else note('Đã chọn điểm lấy nét · chế độ tự động của camera đang hoạt động');
-}
-$('modes').onclick=e=>{const m=e.target.dataset.m;if(!m)return;mode=m;document.querySelectorAll('#modes b').forEach(b=>b.classList.toggle('on',b===e.target));$('pro').classList.toggle('on',m==='pro');
- const pre={photo:[0,100,5500,0],portrait:[.2,100,5800,8],night:[0,100,5200,0],pro:[P.ev,P.iso,P.wb,P.ct]}[m];[P.ev,P.iso,P.wb,P.ct]=pre;syncPro();applyView();
- if(camCaps.iso)applyRealCameraControl('iso',P.iso);
- if(camCaps.colorTemperature)applyRealCameraControl('colorTemperature',P.wb);
- if(hardwareEV)applyRealCameraControl('exposureCompensation',m==='night'?Math.min(camCaps.exposureCompensation.max,1.5):(m==='pro'?P.ev:0));
- note(m==='night'?'Chụp đêm: giữ máy yên ~2 giây, máy gộp nhiều khung để giảm nhiễu':baseNote)};
-const prs=[['pEV','ev','oEV',v=>(+v).toFixed(1)],['pISO','iso','oISO',v=>v],['pWB','wb','oWB',v=>v],['pCT','ct','oCT',v=>v]];
-function syncPro(){prs.forEach(([i,k,o,f])=>{$(i).value=P[k];$(o).textContent=$(i).disabled?'N/A':f(P[k])})}
-async function applyRealCameraControl(k,v){try{await track.applyConstraints({advanced:[{[k]:v}]})}catch(_){}}
-prs.forEach(([i,k,o,f])=>$(i).oninput=()=>{P[k]=+$(i).value;$(o).textContent=f(P[k]);if(k==='iso')applyRealCameraControl('iso',P[k]);if(k==='wb')applyRealCameraControl('colorTemperature',P[k]);if(k==='ev'&&hardwareEV)applyRealCameraControl('exposureCompensation',P[k]);applyView()});
-function applyView(){ $('vid').style.filter=`contrast(${1+P.ct/100})`; }   <div class="note" id="batchSt"></div></div>
+<!-- ===== TRUNG TÂM AI ===== -->
+<section class="tab" id="t-ai"><div class="aipage">
+ <h2>Trung tâm AI</h2>
+ <div class="card"><h3>Kết nối Gemini</h3>
+  <input type="password" id="gKey" placeholder="Gemini API key" autocomplete="off">
+  <label class="chk"><input type="checkbox" id="gRem"> Nhớ khoá trong phiên này (tự xoá khi đóng tab)</label>
+  <label class="chk"><input type="checkbox" id="gOk"> Tôi đồng ý gửi ảnh (đã thu nhỏ) và mô tả tới Google Gemini khi tự bấm một tính năng đám mây</label>
+  <div class="two"><input type="text" id="mTxt" placeholder="Model phân tích"><input type="text" id="mImg" placeholder="Model tạo ảnh"></div>
+  <div class="rw"><button class="btn" id="gTest">Kiểm tra kết nối</button></div>
+  <div class="note" id="gStat"></div>
+ </div>
+ <div class="card"><h3>Chạy ngay trên máy (không gửi ảnh)</h3><ul id="aiCaps"></ul></div>
+ <div class="card"><h3>Tự động hoá (gửi ảnh tới Gemini)</h3>
+  <label class="chk"><input type="checkbox" id="tAuto"> Tự phân tích và gắn thẻ ảnh vừa chụp</label>
+  <div class="rw"><button class="btn" id="bBatch">Gắn thẻ ảnh chưa phân tích</button><button class="btn" id="bBatchX" style="display:none">Dừng</button></div>
+  <div class="note" id="batchSt"></div></div>
  <div class="card"><h3>Tạo ảnh từ mô tả</h3>
   <textarea id="tiPr" rows="3" placeholder="VD: một chú mèo cam ngồi bên cửa sổ, ánh nắng sớm"></textarea>
   <select id="tiAr"><option>1:1</option><option>4:3</option><option>3:4</option><option>16:9</option><option>9:16</option></select>
@@ -263,7 +377,8 @@ function drawOv(){const c=ov.getContext('2d'),r=ov.getBoundingClientRect();if(ov
 /* ---------- Xử lý ảnh: căn chỉnh khung, xếp chồng, giảm nhiễu (hàm thuần) ---------- */
 /*PURE-START*/
 function lumaGrid(d,w,h,ds){const gw=(w/ds)|0,gh=(h/ds)|0,g=new Float32Array(gw*gh),o=[ds/6|0,ds/2|0,ds*5/6|0];
- for(let y=0;y<gh;y++)for(let x=0;x<gw;x++){let a=0;for(const j of o)for(const i of o){const p=((y*ds+j)*w+x*ds+i)<<2;a+=.3*d[p]+.59*d[p+1]+.11*d[p+2]}g[y*gw+x]=a/9}  return{g,gw,gh}}
+ for(let y=0;y<gh;y++)for(let x=0;x<gw;x++){let a=0;for(const j of o)for(const i of o){const p=((y*ds+j)*w+x*ds+i)<<2;a+=.3*d[p]+.59*d[p+1]+.11*d[p+2]}g[y*gw+x]=a/9}
+ return{g,gw,gh}}
 function align1(A,B,R){let best=1e18,bx=0,by=0;
  for(let dy=-R;dy<=R;dy++)for(let dx=-R;dx<=R;dx++){let s=0,n=0;
   for(let y=R;y<A.gh-R;y+=2)for(let x=R;x<A.gw-R;x+=2){s+=Math.abs(A.g[y*A.gw+x]-B.g[(y+dy)*B.gw+x+dx]);n++}
@@ -372,7 +487,8 @@ $('fImp').onchange=async e=>{
 $('bExp').onclick=async()=>{for(const p of await dbAll()){const a=document.createElement('a');a.href=URL.createObjectURL(p.cur);a.download='aps-'+p.id+'.jpg';a.click();await new Promise(r=>setTimeout(r,250))}};
 
 /* ---------- STUDIO: chỉnh sửa không phá huỷ ---------- */
-const SL=[['ex','Phơi sáng',-3,3,.05,0,'L'],['ct','Tương phản',-100,100,1,0,'L'],['hl','Vùng sáng',-100,100,1,0,'L'],['sh','Vùng tối',-100,100,1,0,'L'],['tp','Nhiệt độ',-100,100,1,0,'C'],['sa','Bão hoà',-100,100,1,0,'C'],['vg','Viền tối',0,100,1,0,'C'],['nr','Giảm nhiễu',0,100,1,0,'D'],['sp','Độ sắc nét',0,100,1,0,'D'],['cl','Độ rõ nét',-100,100,1,0,'D']]; let cur=null,E={},base=null,orig2=null;
+const SL=[['ex','Phơi sáng',-3,3,.05,0,'L'],['ct','Tương phản',-100,100,1,0,'L'],['hl','Vùng sáng',-100,100,1,0,'L'],['sh','Vùng tối',-100,100,1,0,'L'],['tp','Nhiệt độ',-100,100,1,0,'C'],['sa','Bão hoà',-100,100,1,0,'C'],['vg','Viền tối',0,100,1,0,'C'],['nr','Giảm nhiễu',0,100,1,0,'D'],['sp','Độ sắc nét',0,100,1,0,'D'],['cl','Độ rõ nét',-100,100,1,0,'D']];
+let cur=null,E={},base=null,orig2=null;
 SL.forEach(s=>$('sl'+s[6]).insertAdjacentHTML('beforeend',`<div class="sl"><span>${s[1]}</span><input type="range" id="e_${s[0]}" min="${s[2]}" max="${s[3]}" step="${s[4]}" value="${s[5]}"><output id="o_${s[0]}">0</output></div>`));
 SL.forEach(s=>$('e_'+s[0]).oninput=()=>{E[s[0]]=+$('e_'+s[0]).value;$('o_'+s[0]).textContent=E[s[0]];queue()});
 const zero=()=>Object.fromEntries(SL.map(s=>[s[0],0]));
@@ -451,7 +567,8 @@ async function analyzePhoto(id){const rec=await dbGet(id);if(!rec)throw Error('K
  aiLog('Phân tích ảnh: '+(a.scene||'?')+' · '+tags.join(', '));return a}
 function renderAna(a){const o=$('aiOut');o.style.display='block';
  o.innerHTML=`<b>${esc(a.scene||'ảnh')}</b> · ${esc(a.desc)}<br><span class="note">Phơi sáng: ${esc(a.quality.exposure||'?')} · Nhiễu: ${esc(a.quality.noise||'?')} · Độ nét: ${esc(a.quality.sharpness||'?')}</span><div class="tags">${a.tags.map(t=>`<span>#${esc(t)}</span>`).join('')}</div>${a.tip?`<div class="note">💡 ${esc(a.tip)}</div>`:''}${Object.keys(a.edit).length?'<button class="btn" id="anaApply">Áp dụng gợi ý chỉnh</button>':''}`;
- const b=$('anaApply');if(b)b.onclick=()=>{setE({...E,...a.edit});render();pushH();$('gMsg').textContent='Đã áp dụng gợi ý từ phân tích (↶ để hoàn tác).'}} $('gAna').onclick=()=>cur?aiRun('Gemini đang phân tích ảnh',async()=>{const a=await analyzePhoto(cur.id);renderAna(a);$('gMsg').textContent='Đã nhận diện và gắn thẻ ảnh.'}):($('gMsg').textContent='Hãy chọn ảnh trong Thư viện trước.');
+ const b=$('anaApply');if(b)b.onclick=()=>{setE({...E,...a.edit});render();pushH();$('gMsg').textContent='Đã áp dụng gợi ý từ phân tích (↶ để hoàn tác).'}}
+$('gAna').onclick=()=>cur?aiRun('Gemini đang phân tích ảnh',async()=>{const a=await analyzePhoto(cur.id);renderAna(a);$('gMsg').textContent='Đã nhận diện và gắn thẻ ảnh.'}):($('gMsg').textContent='Hãy chọn ảnh trong Thư viện trước.');
 function autoTag(id){if(!$('tAuto').checked||!keyOk()||!$('gOk').checked)return;analyzePhoto(id).catch(e=>aiLog('Tự gắn thẻ lỗi: '+e.message))}
 
 /* ---------- Chỉnh sửa: lịch sử hoàn tác/làm lại ---------- */
@@ -530,7 +647,8 @@ const kHint=()=>{$('kHint').textContent=KINDS[aiKind][1];$('gPr').placeholder=KI
 $('kinds').onclick=e=>{const k=e.target.dataset.k;if(!k)return;aiKind=k;document.querySelectorAll('#kinds .chip').forEach(b=>b.classList.toggle('on',b.dataset.k===k));kHint()};
 let resP=null,resUrl='',origUrl='',showOrig=false;
 async function showResult(blob,txt,meta){resP={blob,meta};showOrig=false;if(resUrl)URL.revokeObjectURL(resUrl);if(origUrl){URL.revokeObjectURL(origUrl);origUrl=''}resUrl=URL.createObjectURL(blob);$('rImg').src=resUrl;
- const im=await bmp(blob);$('rNote').textContent=`${im.width}×${im.height}px · Ảnh do AI tạo/chỉnh sửa (sẽ gắn nhãn ✦ AI trong Thư viện)${txt?' · '+txt.slice(0,160):''}`;  $('rCmp').style.display=meta.orig?'inline-block':'none';$('rCmp').textContent='◐ Xem ảnh gốc';$('aiRes').classList.add('on');$('aiRes').setAttribute('aria-hidden','false')}
+ const im=await bmp(blob);$('rNote').textContent=`${im.width}×${im.height}px · Ảnh do AI tạo/chỉnh sửa (sẽ gắn nhãn ✦ AI trong Thư viện)${txt?' · '+txt.slice(0,160):''}`;
+ $('rCmp').style.display=meta.orig?'inline-block':'none';$('rCmp').textContent='◐ Xem ảnh gốc';$('aiRes').classList.add('on');$('aiRes').setAttribute('aria-hidden','false')}
 function closeRes(){$('aiRes').classList.remove('on');$('aiRes').setAttribute('aria-hidden','true');resP=null}
 $('rCmp').onclick=()=>{if(!resP||!resP.meta.orig)return;showOrig=!showOrig;if(showOrig&&!origUrl)origUrl=URL.createObjectURL(resP.meta.orig);$('rImg').src=showOrig?origUrl:resUrl;$('rCmp').textContent=showOrig?'◐ Xem kết quả AI':'◐ Xem ảnh gốc'};
 async function saveRes(){if(!resP)return null;const b=resP.blob,m=resP.meta,id=Date.now();await dbPut({id,t:id,orig:b,cur:b,thumb:await thumbOf(b),p:null,src:'gemini',ai:true,aiKind:m.kind,aiPrompt:m.prompt||'',parent:m.parent||null,tags:['ai'],scene:''});aiLog('Đã lưu ảnh AI vào Thư viện');return id}
