@@ -13,7 +13,7 @@ nav button{flex:1;background:none;border:0;color:var(--mu);padding:10px 0;font:i
 nav button.on{color:var(--ac)}nav i{display:block;font-style:normal;font-size:20px;margin-bottom:2px}nav button{padding:11px 0 9px}
 button,select{font:inherit;color:var(--tx);cursor:pointer}
 /* CAMERA (Oppo 60%) */
-.vf{position:relative;flex:1;min-height:300px;background:#05070b;overflow:hidden;max-width:620px;width:100%;margin:10px auto 0;border:1px solid #ffffff12;border-radius:22px;box-shadow:0 18px 55px #0008;touch-action:pan-y}
+.vf{position:relative;flex:1;min-height:300px;background:#05070b;overflow:hidden;max-width:620px;width:100%;margin:10px auto 0;border:1px solid #ffffff12;border-radius:22px;box-shadow:0 18px 55px #0008;touch-action:pan-y pinch-zoom}
 .vf video,.vf canvas.fx,.vf canvas.demo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .25s}
 #ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .focus-ring{position:absolute;width:54px;height:54px;border:1.5px solid #f2d69b;border-radius:50%;z-index:4;pointer-events:none;display:none;transform:translate(-50%,-50%);filter:drop-shadow(0 2px 5px #000);animation:focusPulse .75s ease-out}
@@ -131,7 +131,38 @@ input[type=range]{width:100%;accent-color:var(--ac)}
 .viewer .vbar{flex-wrap:wrap;justify-content:center}.viewer .vbar #vInfo{flex:1 0 100%;text-align:center}.viewer .vbar .btn{padding:9px 12px}
 @media(max-width:780px){.gh{flex-wrap:wrap}.gh h2{flex:1 0 100%}.gh .gb{flex:1}.pro{padding:8px 10px}.pro-values{grid-template-columns:repeat(3,minmax(0,1fr))}.pro-param{padding:8px}.viewer{padding:14px}.viewer .vbar{gap:5px}}
 @media(orientation:landscape) and (max-height:620px){.pro{max-width:250px}.pro-values{grid-template-columns:repeat(2,minmax(0,1fr))}}
-</style></head><body>
+
+/* Camera upgrades: manual zoom, looks, settings, theme */
+.zoom-manual{position:absolute;left:50%;bottom:48px;transform:translateX(-50%);z-index:4;display:flex;align-items:center;gap:9px;width:min(78%,360px);padding:6px 12px;border-radius:18px;background:#090d15c9;border:1px solid #ffffff20;backdrop-filter:blur(12px)}
+.zoom-manual span{font:600 12px ui-monospace,monospace;color:#f1d49c;min-width:38px;text-align:center}
+.zoom-manual input{flex:1;min-width:0}
+.look-row{display:flex;gap:6px;overflow-x:auto;padding:3px 0 10px;scrollbar-width:none}
+.look-row::-webkit-scrollbar{display:none}
+.look-chip{flex:none;border:1px solid #ffffff20;background:#202838;color:#d9dce3;border-radius:18px;padding:6px 11px;font-size:11px}
+.look-chip.on{background:var(--ac);color:#1b160c;border-color:var(--ac);font-weight:700}
+.settings-overlay{position:fixed;inset:0;z-index:40;background:#000b;display:none;align-items:flex-end;justify-content:center;padding:12px}
+.settings-overlay.on{display:flex}
+.settings-panel{width:min(100%,560px);max-height:88%;overflow:auto;background:#151b27;border:1px solid #ffffff24;border-radius:20px;padding:16px;box-shadow:0 18px 60px #0009}
+.settings-head{display:flex;align-items:center;justify-content:space-between;font-size:17px;margin-bottom:12px}
+.settings-panel h4{margin:15px 0 6px;color:var(--ac);font-size:10px;letter-spacing:.14em;text-transform:uppercase}
+.setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #ffffff12;font-size:13px}
+.setting-row select{max-width:58%;background:#0b1019;border:1px solid #ffffff25;border-radius:9px;padding:8px;color:var(--tx)}
+.setting-row input{width:18px;height:18px;accent-color:var(--ac)}
+.setting-disabled{font-size:11px;color:#9ba3b2;text-align:right}
+.setting-note{font-size:11px;color:#9ba3b2;padding:8px 0;line-height:1.5}
+body[data-theme="light"]{--bg:#eef1f5;--cd:#fff;--ln:#d8dee8;--tx:#18202b;--mu:#657184;--glass:#e7ebf2;background:linear-gradient(180deg,#f8fafc,#e9edf3);color:var(--tx)}
+body[data-theme="light"] nav{background:#ffffffed;border-color:#d8dee8}
+body[data-theme="light"] .ctrl,body[data-theme="light"] .pnl,body[data-theme="light"] .card,body[data-theme="light"] .settings-panel{background:#fff;color:#18202b}
+body[data-theme="light"] .gh{background:#ffffffed;border-color:#d8dee8}
+body[data-theme="light"] .btn,body[data-theme="light"] .chip,body[data-theme="light"] .look-chip{background:#e8edf4;color:#18202b;border-color:#d5dce7}
+body[data-theme="light"] .pro,body[data-theme="light"] .pro-adjust{background:#e9edf3;color:#18202b}
+body[data-theme="light"] .pro-param{background:#fff;color:#18202b;border-color:#d5dce7}
+body[data-theme="light"] .pro-param.on{background:#f7ecd5;border-color:#b28b45}
+body[data-theme="light"] .pnl .sl,body[data-theme="light"] .aipage input,body[data-theme="light"] .aipage textarea,body[data-theme="light"] .aipage select{background:#f2f5f9;color:#18202b;border-color:#d5dce7}
+body[data-theme="light"] .settings-panel .setting-row select{background:#f2f5f9;color:#18202b}
+@media(max-width:780px){.zoom-manual{bottom:48px;width:76%}.look-row{padding-bottom:8px}.settings-overlay{padding:0}.settings-panel{border-radius:20px 20px 0 0;max-height:90%;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}}
+@media(orientation:landscape) and (max-height:620px){.zoom-manual{left:50%;bottom:12px;width:min(44%,260px)}.look-row{max-width:620px;margin:auto}}
+\n</style></head><body>
 
 <!-- ===== CAMERA ===== -->
 <section class="tab on" id="t-cam">
@@ -139,10 +170,11 @@ input[type=range]{width:100%;accent-color:var(--ac)}
  <canvas class="demo" id="demo" width="480" height="640"></canvas>
  <video id="vid" playsinline muted style="display:none"></video>
  <canvas id="ov"></canvas><div class="focus-ring" id="focusRing" aria-hidden="true"></div>
- <div class="top"><button class="pill" id="bFlash">⚡ Tắt</button><button class="pill" id="bGrid">▦ Lưới</button><button class="pill" id="bRes">📐 4K</button><button class="pill" id="bAI">✨ AI: Tắt</button></div>
+ <div class="top"><button class="pill" id="bFlash">⚡ Tắt</button><button class="pill" id="bGrid">▦ Lưới</button><button class="pill" id="bRes">📐 4K</button><button class="pill" id="bAI">✨ AI: Tắt</button><button class="pill" id="bSettings" aria-label="Cài đặt">⚙</button></div>
  <div class="sug" id="sug" style="display:none"></div><div class="sugbtn" id="sugBtn" style="display:none"></div>
  <div class="scene" id="scene"><span id="sceneTxt">Đang nhận diện cảnh…</span><button id="sceneGo" style="display:none"></button><button id="sceneAsk" title="Nhận diện chi tiết bằng Gemini (gửi 1 khung hình)">🔍 Hỏi AI</button><button id="sceneNo" style="display:none">✕</button></div>
  <div class="lens" id="lens"></div>
+ <div class="zoom-manual" id="zoomManual"><span id="zoomReadout">1.0×</span><input id="zoomRange" type="range" min="1" max="5" step=".1" value="1" aria-label="Zoom thủ công"></div>
 </div>
 <div class="pro" id="pro">
  <div class="pro-head"><span>ĐIỀU KHIỂN THỦ CÔNG</span><span id="proSupport" class="note">Thông số thiết bị</span></div>
@@ -165,6 +197,9 @@ input[type=range]{width:100%;accent-color:var(--ac)}
 </div>
 <div class="ctrl">
  <div class="modes" id="modes"><b data-m="photo" class="on">Ảnh</b><b data-m="portrait">Chân dung</b><b data-m="night">Đêm</b><b data-m="pro">Pro</b></div>
+ <div class="look-row" id="lookRow" aria-label="Hiệu ứng chụp">
+  <button class="look-chip on" data-look="natural">Tự nhiên</button><button class="look-chip" data-look="cinema">Cinema</button><button class="look-chip" data-look="warm">Golden</button><button class="look-chip" data-look="moody">Moody</button><button class="look-chip" data-look="vintage">Film</button><button class="look-chip" data-look="mono">B&W</button>
+ </div>
  <div class="shutrow"><div class="thumb" id="thumb"></div><button class="shut" id="shut"><i></i></button><button class="flip" id="flip">🔄</button></div>
  <div class="note" id="camNote" style="text-align:center;margin-top:6px"></div>
 </div>
@@ -204,7 +239,7 @@ input[type=range]{width:100%;accent-color:var(--ac)}
   <h4>Sáng tạo &amp; thay đổi nội dung</h4>
   <div class="chips" id="kinds"></div><div class="note" id="kHint"></div>
   <div class="rw"><button class="btn p" id="gGen">✦ Tạo ảnh AI</button><button class="btn" id="gCancel" style="display:none">Dừng</button></div>
-  <div class="note" id="gMsg">Tính năng Gemini gửi ảnh (đã thu nhỏ) tới Google. Nhập khoá và đồng ý ở tab AI.</div>
+  <div class="note" id="gMsg">Tính năng Gemini gửi ảnh (đã thu nhỏ) tới Google. Đồng ý gửi ảnh ở tab AI để dùng tính năng Gemini.</div>
   <div class="rw" style="margin-top:14px"><button class="btn p" id="sSave">💾 Lưu bản chỉnh</button><button class="btn" id="sDl">⬇ Tải JPG</button></div>
  </div>
 </div></section>
@@ -212,13 +247,13 @@ input[type=range]{width:100%;accent-color:var(--ac)}
 <!-- ===== TRUNG TÂM AI ===== -->
 <section class="tab" id="t-ai"><div class="aipage">
  <h2>Trung tâm AI</h2>
- <div class="card"><h3>Kết nối Gemini</h3>
-  <input type="password" id="gKey" placeholder="Gemini API key" autocomplete="off">
-  <label class="chk"><input type="checkbox" id="gRem"> Nhớ khoá trong phiên này (tự xoá khi đóng tab)</label>
-  <label class="chk"><input type="checkbox" id="gOk"> Tôi đồng ý gửi ảnh (đã thu nhỏ) và mô tả tới Google Gemini khi tự bấm một tính năng đám mây</label>
+ <div class="card"><h3>Kết nối AI Camera Pro</h3>
+  <div class="note">Gemini được kết nối qua máy chủ bảo mật. Bạn không cần nhập API key hay đăng nhập tài khoản.</div>
+  <label class="chk"><input type="checkbox" id="gOk"> Tôi đồng ý gửi ảnh (đã thu nhỏ) và mô tả tới Google Gemini khi tự bấm một tính năng AI đám mây</label>
+  <div id="cf-turnstile" style="margin:12px 0"></div>
   <div class="two"><input type="text" id="mTxt" placeholder="Model phân tích"><input type="text" id="mImg" placeholder="Model tạo ảnh"></div>
   <div class="rw"><button class="btn" id="gTest">Kiểm tra kết nối</button></div>
-  <div class="note" id="gStat"></div>
+  <div class="note" id="gStat">Chưa cấu hình máy chủ. Hãy hoàn tất các bước trong hướng dẫn đi kèm.</div>
  </div>
  <div class="card"><h3>Chạy ngay trên máy (không gửi ảnh)</h3><ul id="aiCaps"></ul></div>
  <div class="card"><h3>Tự động hoá (gửi ảnh tới Gemini)</h3>
@@ -238,7 +273,27 @@ input[type=range]{width:100%;accent-color:var(--ac)}
  <div class="vbar"><button class="btn" id="rCmp">◐ Xem ảnh gốc</button><span style="flex:1"></span><button class="btn" id="rOpen">Mở Studio</button><button class="btn p" id="rSave">💾 Lưu vào Thư viện</button></div>
 </div>
 
-<nav><button class="on" data-t="cam"><i>📷</i>Camera</button><button data-t="gal"><i>🖼</i>Thư viện</button><button data-t="stu"><i>🎛</i>Studio</button><button data-t="ai"><i>🤖</i>AI</button></nav>
+
+<div class="settings-overlay" id="camSettings" aria-hidden="true">
+ <div class="settings-panel">
+  <div class="settings-head"><b>Cài đặt Camera</b><button class="btn" id="settingsClose">Đóng</button></div>
+  <h4>Chụp ảnh</h4>
+  <label class="setting-row"><span>Hẹn giờ chụp</span><select id="captureTimer"><option value="0">Tắt</option><option value="3">3 giây</option><option value="5">5 giây</option><option value="10">10 giây</option></select></label>
+  <label class="setting-row"><span>Chất lượng JPEG</span><select id="captureQuality"><option value="0.88">Tiết kiệm dung lượng</option><option value="0.95" selected>Cao</option><option value="0.99">Tối đa</option></select></label>
+  <label class="setting-row"><span>Khung ảnh</span><select id="captureFrame"><option value="none">Không khung</option><option value="classic">Classic</option><option value="film">Film</option><option value="clean">Minimal</option></select></label>
+  <label class="setting-row"><span>Ghi thông tin ảnh</span><input type="checkbox" id="captureStamp"></label>
+  <h4>Định dạng &amp; điều khiển</h4>
+  <div class="setting-row"><span>RAW / DNG</span><span class="setting-disabled">Chưa hỗ trợ trên Web</span></div>
+  <div class="setting-note">RAW thật cần API Camera2/CameraX trong APK Android. Website hiện chỉ có thể lưu JPEG chất lượng cao; không giả lập RAW.</div>
+  <div class="setting-row"><span>Giơ bàn tay để chụp</span><span class="setting-disabled">Cần AI nhận diện bàn tay</span></div>
+  <div class="setting-row"><span>Nút âm lượng để chụp</span><span class="setting-disabled">Cần tích hợp native Android</span></div>
+  <div class="setting-note">Hai tính năng này được để trong thiết kế cài đặt, nhưng chưa bật giả vì trình duyệt không có quyền ổn định để nhận diện cử chỉ bàn tay hoặc chiếm phím âm lượng.</div>
+  <h4>Giao diện</h4>
+  <label class="setting-row"><span>Giao diện</span><select id="uiTheme"><option value="dark">Tối</option><option value="light">Sáng</option></select></label>
+  <div class="setting-note">Chọn khung ảnh và ghi thông tin sẽ được áp dụng lên file ảnh khi chụp; ảnh gốc cảm biến vẫn không phải RAW.</div>
+ </div>
+</div>
+\n<nav><button class="on" data-t="cam"><i>📷</i>Camera</button><button data-t="gal"><i>🖼</i>Thư viện</button><button data-t="stu"><i>🎛</i>Studio</button><button data-t="ai"><i>🤖</i>AI</button></nav>
 
 <script>
 const $=id=>document.getElementById(id),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -255,10 +310,41 @@ const bmp=b=>new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.src=URL.cre
 const blobOf=(c,q=.93)=>new Promise(r=>c.toBlob(r,'image/jpeg',q));
 
 /* ---------- CAMERA ---------- */
+
+/* ---------- Cài đặt Camera ---------- */
+const settingDefaults={timer:'0',quality:'0.95',frame:'none',stamp:false,theme:'dark'};
+function readSetting(k,d){try{return localStorage.getItem('cam_'+k)??d}catch(_){return d}}
+function saveSetting(k,v){try{localStorage.setItem('cam_'+k,String(v))}catch(_){}}
+$('captureTimer').value=readSetting('timer','0');
+$('captureQuality').value=readSetting('quality','0.95');
+$('captureFrame').value=readSetting('frame','none');
+$('captureStamp').checked=readSetting('stamp','false')==='true';
+$('uiTheme').value=readSetting('theme','dark');
+document.body.dataset.theme=$('uiTheme').value;
+$('bSettings').onclick=()=>{$('camSettings').classList.add('on');$('camSettings').setAttribute('aria-hidden','false')};
+function closeSettings(){$('camSettings').classList.remove('on');$('camSettings').setAttribute('aria-hidden','true')}
+$('settingsClose').onclick=closeSettings;
+$('camSettings').addEventListener('click',e=>{if(e.target===$('camSettings'))closeSettings()});
+[['captureTimer','timer'],['captureQuality','quality'],['captureFrame','frame']].forEach(([id,k])=>$(id).onchange=()=>saveSetting(k,$(id).value));
+$('captureStamp').onchange=()=>saveSetting('stamp',$('captureStamp').checked);
+$('uiTheme').onchange=()=>{document.body.dataset.theme=$('uiTheme').value;saveSetting('theme',$('uiTheme').value)};
+function decorateCapture(canvas){
+ const frame=$('captureFrame').value,stamp=$('captureStamp').checked;
+ if(frame==='none'&&!stamp)return canvas;
+ const c=document.createElement('canvas');c.width=canvas.width;c.height=canvas.height;
+ const x=c.getContext('2d');x.drawImage(canvas,0,0);
+ const m=Math.max(10,Math.round(Math.min(c.width,c.height)*.018));
+ if(frame==='classic'){x.strokeStyle='#f5f0e6';x.lineWidth=m;x.strokeRect(m/2,m/2,c.width-m,c.height-m)}
+ if(frame==='film'){x.fillStyle='#111';x.fillRect(0,0,c.width,m*2);x.fillRect(0,c.height-m*2,c.width,m*2);x.fillStyle='#f3e8d1';for(let xx=m;xx<c.width-m;xx+=m*1.6){x.fillRect(xx,m*.55,m*.55,m*.8);x.fillRect(xx,c.height-m*1.35,m*.55,m*.8)}}
+ if(frame==='clean'){x.strokeStyle='#fff';x.lineWidth=Math.max(2,m*.16);x.strokeRect(m,m,c.width-2*m,c.height-2*m)}
+ if(stamp){const h=Math.max(28,Math.round(c.width*.035));x.fillStyle='#0009';x.fillRect(0,c.height-h,c.width,h);x.fillStyle='#fff';x.font=`${Math.max(12,Math.round(h*.38))}px system-ui`;x.textBaseline='middle';x.fillText(`AI CAMERA PRO  ·  ${facing==='environment'?'REAR':'FRONT'}  ·  ${mode.toUpperCase()}  ·  ${c.width}×${c.height}  ·  ${new Date().toLocaleDateString('vi-VN')}`,Math.max(8,m/2),c.height-h/2)}
+ return c;
+}
+
 const vid=$('vid'),demo=$('demo'),ov=$('ov');
 // Kích thước yêu cầu theo chuẩn phổ biến 16:9; camera có thể trả về kích thước khác.
 const RES={FHD:{w:1920,h:1080,cap:1920},'4K':{w:3840,h:2160,cap:3840},'8K':{w:7680,h:4320,cap:7680}};
-let stream,track,ic,photoCaps,camCaps={},hardwareEV=false,facing='environment',lenses=[],curLens=1,digital=1,mode='photo',aiOn=false,gridOn=true,P={ev:0,iso:100,wb:5500,ct:0},resK=RES[localStorage.getItem('res')]?localStorage.getItem('res'):'4K',baseNote='';
+let stream,track,ic,photoCaps,camCaps={},hardwareEV=false,facing='environment',lenses=[],curLens=1,digital=1,mode='photo',aiOn=false,gridOn=true,P={ev:0,iso:100,wb:5500,ct:0},activeLook='natural',resK=RES[localStorage.getItem('res')]?localStorage.getItem('res'):'4K',baseNote='';
 const note=t=>$('camNote').textContent=t;
 $('bRes').textContent='📐 '+resK;$('bRes').onclick=()=>{resK=resK==='FHD'?'4K':resK==='4K'?'8K':'FHD';localStorage.setItem('res',resK);$('bRes').textContent='📐 '+resK;if(stream)startCam()};
 
@@ -303,7 +389,7 @@ async function detectLenses(){const devs=(await navigator.mediaDevices.enumerate
  const hz=cap.zoom?cap.zoom.max:1;
  [2,3,5].forEach(z=>{if(z===3&&tele)lenses.push({z:3,dev:tele.deviceId,t:'3×',tele:1});else lenses.push({z,hw:hz>=z,t:z+'×'})});
  $('lens').innerHTML=lenses.map((l,i)=>`<button data-i="${i}" class="${l.z===1?'on':''}">${l.t}</button>`).join('')}
-$('lens').onclick=async e=>{const i=e.target.dataset.i;if(i==null)return;const l=lenses[i];document.querySelectorAll('#lens button').forEach(b=>b.classList.toggle('on',b===e.target));curLens=l.z;digital=1;F.on=false;sg.p=null;
+$('lens').onclick=async e=>{const i=e.target.dataset.i;if(i==null)return;const l=lenses[i];document.querySelectorAll('#lens button').forEach(b=>b.classList.toggle('on',b===e.target));curLens=l.z;digital=1;$('zoomRange').value=1;$('zoomReadout').textContent='1.0×';F.on=false;sg.p=null;
  if(stream&&l.dev){try{stream.getTracks().forEach(t=>t.stop());stream=await navigator.mediaDevices.getUserMedia({video:{deviceId:{exact:l.dev},width:{ideal:RES[resK].w},height:{ideal:RES[resK].h}}});vid.srcObject=stream;vid.play().catch(()=>{});track=stream.getVideoTracks()[0];ic=window.ImageCapture?new ImageCapture(track):null;photoCaps=null;ic&&ic.getPhotoCapabilities().then(c=>photoCaps=c).catch(()=>{});$('camNote').textContent='Dùng ống kính '+l.t+' (phần cứng)';return}catch(_){}}
  if(l.z<1){digital=1;$('camNote').textContent='Máy không có góc siêu rộng – dùng 1×';return}
  if(l.z>1){if(l.hw&&track){try{await track.applyConstraints({advanced:[{zoom:l.z}]});$('camNote').textContent='Zoom quang/phần cứng '+l.t;return}catch(_){}}
@@ -314,14 +400,24 @@ function applyView(){
  // EV chỉ dùng bộ lọc dự phòng nếu camera không có điều khiển bù phơi sáng phần cứng.
  const evFallback=hardwareEV?1:Math.pow(2,P.ev);
  const f=`brightness(${evFallback}) contrast(${1+P.ct/100})`;
- [vid,demo].forEach(e=>{e.style.filter=f});
+ const looks={natural:'none',cinema:'contrast(1.18) saturate(1.12) sepia(.08)',warm:'sepia(.18) saturate(1.25) contrast(1.04)',moody:'contrast(1.28) saturate(.78) brightness(.92)',vintage:'sepia(.28) contrast(.92) saturate(.82)',mono:'grayscale(1) contrast(1.12)'};
+ const look=looks[activeLook]||'none';
+ [vid,demo].forEach(e=>{e.style.filter=`${f} ${look}`});
 }
+const lookFilters={natural:'none',cinema:'contrast(1.18) saturate(1.12) sepia(.08)',warm:'sepia(.18) saturate(1.25) contrast(1.04)',moody:'contrast(1.28) saturate(.78) brightness(.92)',vintage:'sepia(.28) contrast(.92) saturate(.82)',mono:'grayscale(1) contrast(1.12)'};
+document.querySelectorAll('.look-chip').forEach(b=>b.onclick=()=>{activeLook=b.dataset.look;document.querySelectorAll('.look-chip').forEach(x=>x.classList.toggle('on',x===b));applyView()});
+function setDigitalZoom(v){digital=clamp(+v,1,5);F.on=false;sg.p=null;sg.hold=0;$('zoomRange').value=digital;$('zoomReadout').textContent=digital.toFixed(1)+'×';$('camNote').textContent='Zoom số '+digital.toFixed(1)+'× · chất lượng giảm khi phóng lớn'}
+$('zoomRange').oninput=e=>setDigitalZoom(e.target.value);
+let pinchStart=0,pinchZoom=1,pointers=new Map();
+$('vf').addEventListener('pointerdown',e=>{pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===2){const a=[...pointers.values()];pinchStart=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);pinchZoom=digital}},{passive:true});
+$('vf').addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===2){const a=[...pointers.values()],dist=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);if(pinchStart>0)setDigitalZoom(pinchZoom*dist/pinchStart)}},{passive:true});
+['pointerup','pointercancel','pointerleave'].forEach(n=>$('vf').addEventListener(n,e=>{pointers.delete(e.pointerId);if(pointers.size<2)pinchStart=0},{passive:true}));
 
 /* Chạm để lấy nét: ưu tiên điểm lấy nét phần cứng nếu trình duyệt/thiết bị hỗ trợ. */
 let focusTimer=0;
 async function focusAt(ev){
- if(!stream||!track||!vid.videoWidth)return;
- if(ev.target.closest('button,.sugbtn,.top,.lens,.ctrl,.scene'))return;
+ if(!stream||!track||!vid.videoWidth||pointers.size>0)return;
+ if(ev.target.closest('button,.sugbtn,.top,.lens,.ctrl,.scene,.zoom-manual'))return;
  const rect=ov.getBoundingClientRect(),px=ev.clientX-rect.left,py=ev.clientY-rect.top;
  const ring=$('focusRing');ring.style.left=px+'px';ring.style.top=py+'px';ring.style.display='block';
  ring.style.animation='none';void ring.offsetWidth;ring.style.animation='';
@@ -479,15 +575,18 @@ async function hiResShot(cr,R){const pc=photoCaps,Wv=vid.videoWidth,Hv=vid.video
  if(Math.abs(im.width/im.height-Wv/Hv)>.03)throw Error('lệch tỉ lệ');
  const f=im.width/Wv,sw=cr[2]*f,sh=cr[3]*f,k=Math.min(1,R.cap/Math.max(sw,sh)),w=Math.round(sw*k),h=Math.round(sh*k),c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,cr[0]*f,cr[1]*f,sw,sh,0,0,w,h);return c}
 function adjust(c){const b=hardwareEV?1:Math.pow(2,P.ev),ct=1+P.ct/100;if(Math.abs(b-1)<.01&&Math.abs(ct-1)<.01)return c;const c2=document.createElement('canvas');c2.width=c.width;c2.height=c.height;const x=c2.getContext('2d');x.filter=`brightness(${b}) contrast(${ct})`;x.drawImage(c,0,0);return c2}
-$('shut').onclick=async()=>{if(busy)return;busy=true;$('shut').style.opacity=.5;
+$('shut').onclick=async()=>{if(busy)return;const delay=+$('captureTimer').value;if(delay>0){$('shut').disabled=true;for(let n=delay;n>0;n--){note('Chụp sau '+n+' giây…');await new Promise(r=>setTimeout(r,1000))}$('shut').disabled=false}busy=true;$('shut').style.opacity=.5;
  try{const s=src(),R=RES[resK],cr=crop(s),L=Math.max(cr[2],cr[3]);let k=Math.min(1,R.cap/L),cv,info='';
   if(mode==='night'&&stream){k=Math.min(k,Math.sqrt(12.7e6/(cr[2]*cr[3])));const N=cr[2]*cr[3]*k*k>9e6?6:8,r=await stackShot(s,cr,k,{N,label:'Chụp đêm',skip:1,maxMad:35,thr:50,rc:4,T1:18,s1:2,T2:10,s2:1,tone:1,cs:1.12});cv=r.c;info=`xếp chồng ${r.used}/${N} khung`}
   else{if(stream&&hiOK()&&R.cap>2200){try{cv=await hiResShot(cr,R);info='ảnh tĩnh gốc cảm biến'}catch(_){cv=null}}
    if(!cv){if(stream&&meanLuma(s)<80){k=Math.min(k,Math.sqrt(12.7e6/(cr[2]*cr[3])));const r=await stackShot(s,cr,k,{N:3,label:'Thiếu sáng',maxMad:30,thr:44,rc:2,T1:8,s1:1});cv=r.c;info=`cảnh tối: gộp ${r.used}/3 khung`}
     else{const w=Math.round(cr[2]*k),h=Math.round(cr[3]*k);cv=document.createElement('canvas');cv.width=w;cv.height=h;cv.getContext('2d').drawImage(s,...cr,0,0,w,h)}}
    cv=adjust(cv)}
-  note('Đang lưu…');await tick();const b=await blobOf(cv,.95),id=Date.now(),w=cv.width,h=cv.height;
-  await dbPut({id,t:id,orig:b,cur:b,thumb:await thumbOf(b),p:null,src:'camera',mode,scene:aiOn?(SC_VN[scn.k]||''):''});autoTag(id);$('thumb').style.backgroundImage=`url(${URL.createObjectURL(b)})`;
+  // Áp dụng hiệu ứng màu vào file chụp, không chỉ ở màn hình xem trước.
+  if(activeLook!=='natural'){const fx=document.createElement('canvas');fx.width=cv.width;fx.height=cv.height;const fxctx=fx.getContext('2d');fxctx.filter=lookFilters[activeLook]||'none';fxctx.drawImage(cv,0,0);cv=fx}
+  cv=decorateCapture(cv);
+  note('Đang lưu ảnh chất lượng cao…');await tick();const b=await blobOf(cv,+$('captureQuality').value),id=Date.now(),w=cv.width,h=cv.height;
+  await dbPut({id,t:id,orig:b,cur:b,thumb:await thumbOf(b),p:null,src:'camera',mode,look:activeLook,quality:+$('captureQuality').value,frame:$('captureFrame').value,scene:aiOn?(SC_VN[scn.k]||''):''});autoTag(id);$('thumb').style.backgroundImage=`url(${URL.createObjectURL(b)})`;
   note(`Đã lưu ${w}×${h} (${(w*h/1e6).toFixed(1)}MP)${info?' · '+info:''}`);$('vf').style.opacity=.4;setTimeout(()=>$('vf').style.opacity=1,100);if(navigator.vibrate)navigator.vibrate(20)}
  catch(e){note('Lỗi chụp: '+e.message)}finally{busy=false;$('shut').style.opacity=1}};
 $('thumb').onclick=()=>go('gal');
@@ -542,18 +641,58 @@ $('sDl').onclick=async()=>{if(!cur)return;const a=document.createElement('a');a.
    TRUNG TÂM AI — nhận diện thông minh · chỉnh sửa AI · tạo/thay đổi nội dung
    Ảnh chỉ rời khỏi máy khi bạn bấm một tính năng đám mây (Gemini) và đã đồng ý.
    ===================================================================== */
+// ===== CẤU HÌNH AI CAMERA PRO (điền sau khi tạo Supabase + Cloudflare Turnstile) =====
+const SUPABASE_URL = 'https://YOUR_PROJECT_REF.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'YOUR_SUPABASE_PUBLISHABLE_KEY';
+const TURNSTILE_SITE_KEY = 'YOUR_CLOUDFLARE_TURNSTILE_SITE_KEY';
+// Không đặt GEMINI_API_KEY hoặc Supabase secret key trong file HTML này.
+window.__aiTurnstileToken = '';
+window.__aiTurnstileWidget = null;
+window.onAiTurnstileLoad = function(){
+  if (!window.turnstile || !TURNSTILE_SITE_KEY || TURNSTILE_SITE_KEY.startsWith('YOUR_')) return;
+  const el = document.getElementById('cf-turnstile');
+  if (!el || window.__aiTurnstileWidget !== null) return;
+  window.__aiTurnstileWidget = window.turnstile.render(el, {
+    sitekey: TURNSTILE_SITE_KEY,
+    theme: 'auto',
+    callback: token => { window.__aiTurnstileToken = token; },
+    'expired-callback': () => { window.__aiTurnstileToken = ''; },
+    'error-callback': () => { window.__aiTurnstileToken = ''; }
+  });
+};
+const aiBackendReady = () =>
+  /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(SUPABASE_URL) &&
+  !SUPABASE_URL.includes('YOUR_PROJECT_REF') &&
+  SUPABASE_PUBLISHABLE_KEY.length > 20 &&
+  !SUPABASE_PUBLISHABLE_KEY.includes('YOUR_') &&
+  TURNSTILE_SITE_KEY.length > 10 &&
+  !TURNSTILE_SITE_KEY.includes('YOUR_');
+async function aiTurnstileToken(){
+  if (!aiBackendReady()) throw Error('Chưa cấu hình Supabase/Turnstile. Hãy làm theo README trong gói cài đặt.');
+  if (!window.turnstile || window.__aiTurnstileWidget === null) throw Error('Chưa tải được xác minh chống bot. Hãy tải lại trang.');
+  if (window.__aiTurnstileToken) return window.__aiTurnstileToken;
+  return await new Promise((resolve,reject)=>{
+    const started=Date.now();
+    const poll=()=>{
+      if(window.__aiTurnstileToken){resolve(window.__aiTurnstileToken);return;}
+      if(Date.now()-started>120000){reject(Error('Chưa hoàn tất xác minh chống bot. Hãy thử lại.'));return;}
+      setTimeout(poll,250);
+    };
+    try{window.turnstile.reset(window.__aiTurnstileWidget);}catch(_){}
+    poll();
+  });
+};
+
 const ls=(k,d='')=>{try{return localStorage.getItem(k)??d}catch(_){return d}},lset=(k,v)=>{try{localStorage.setItem(k,v)}catch(_){}};
 const ss=(k,d='')=>{try{return sessionStorage.getItem(k)??d}catch(_){return d}},sset=(k,v)=>{try{v===null?sessionStorage.removeItem(k):sessionStorage.setItem(k,v)}catch(_){}};
 const b64=b=>new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result.split(',')[1]);f.readAsDataURL(b)});
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 /* ---------- Cài đặt & trạng thái kết nối ---------- */
-$('gKey').value=ss('gk');$('gRem').checked=!!ss('gk');$('gOk').checked=ls('aiOk')==='1';
+$('gOk').checked=ls('aiOk')==='1';
 $('mTxt').value=ls('mTxt','gemini-2.5-flash');$('mImg').value=ls('mImg','gemini-2.5-flash-image');$('tAuto').checked=ls('tAuto')==='1';
-const keyOk=()=>$('gKey').value.trim().length>10;
-function stat(m){$('gStat').textContent=m||(keyOk()?($('gOk').checked?'Sẵn sàng. Ảnh chỉ được gửi khi bạn bấm một tính năng đám mây.':'Đã nhập khoá. Hãy tích đồng ý gửi ảnh để dùng tính năng đám mây.'):'Chưa có khoá. Khoá chỉ nằm trong bộ nhớ của trang này (trừ khi bạn chọn nhớ trong phiên).')}
-$('gKey').oninput=()=>{if($('gRem').checked)sset('gk',$('gKey').value);stat()};
-$('gRem').onchange=()=>sset('gk',$('gRem').checked?$('gKey').value:null);
+const keyOk=()=>aiBackendReady();
+function stat(m){$('gStat').textContent=m||(keyOk()?($('gOk').checked?'Máy chủ đã được cấu hình. Ảnh chỉ gửi đi khi bạn chủ động dùng AI và đã đồng ý.':'Hãy tích đồng ý gửi ảnh để dùng tính năng AI.'):'Chưa cấu hình máy chủ Supabase/Turnstile. Xem README đi kèm.')}
 $('gOk').onchange=()=>{lset('aiOk',$('gOk').checked?'1':'0');stat()};
 $('mTxt').onchange=()=>lset('mTxt',$('mTxt').value.trim());$('mImg').onchange=()=>lset('mImg',$('mImg').value.trim());
 $('tAuto').onchange=()=>lset('tAuto',$('tAuto').checked?'1':'0');
@@ -561,18 +700,20 @@ stat();
 const aiLogs=[];function aiLog(t){aiLogs.unshift(new Date().toLocaleTimeString('vi-VN')+' · '+t);aiLogs.length=Math.min(aiLogs.length,10);$('aiLog').innerHTML=aiLogs.map(esc).join('<br>')}
 $('aiCaps').innerHTML=[[!!FD,'Nhận diện khuôn mặt (FaceDetector)',FD?'':' – trình duyệt này không có, dùng ước lượng chủ thể'],[true,'Nhận diện cảnh & gợi ý khung hình',''],[true,'Giảm nhiễu, làm nét, xếp chồng khung chụp đêm',''],[true,'Phong cách AI, cắt khung AI, hoàn tác/làm lại','']].map(([ok,t,x])=>`<li>${ok?'✓':'✗'} ${t}${x}</li>`).join('');
 
-/* ---------- Lớp gọi Gemini: header khoá, timeout, thử lại, thông báo lỗi tiếng Việt ---------- */
+/* ---------- Lớp gọi Gemini qua Supabase Edge Function ---------- */
 let aiCtl=null;
-function aiNeed(){if(!keyOk()){go('ai');throw Error('Hãy nhập Gemini API key trong tab AI.')}if(!$('gOk').checked){go('ai');throw Error('Hãy đồng ý gửi ảnh tới Gemini trong tab AI để dùng tính năng này.')}}
-async function gem(model,parts,cfg,o={}){aiNeed();const body=JSON.stringify({contents:[{parts}],...(cfg?{generationConfig:cfg}:{})});
+function aiNeed(){if(!keyOk()){go('ai');throw Error('Máy chủ AI chưa được cấu hình đầy đủ.')}if(!$('gOk').checked){go('ai');throw Error('Hãy đồng ý gửi ảnh tới Google Gemini trong tab AI trước khi dùng tính năng này.')}}
+async function gem(model,parts,cfg,o={}){aiNeed();const token=await aiTurnstileToken();const body=JSON.stringify({model,contents:[{parts}],...(cfg?{generationConfig:cfg}:{})});
  for(let a=0;a<2;a++){const ctl=aiCtl=new AbortController(),to=setTimeout(()=>ctl.abort('timeout'),o.timeout||90000);let r,j;
-  try{r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':$('gKey').value.trim()},body,signal:ctl.signal});j=await r.json().catch(()=>({}))}
-  catch(e){clearTimeout(to);if(ctl.signal.aborted)throw Error(ctl.signal.reason==='timeout'?'Hết thời gian chờ Gemini.':'Đã dừng.');throw Error('Không kết nối được tới Gemini (mạng hoặc trình duyệt chặn).')}
+  try{r=await fetch(`${SUPABASE_URL}/functions/v1/gemini-proxy`,{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'x-turnstile-token':token},body,signal:ctl.signal});j=await r.json().catch(()=>({}))}
+  catch(e){clearTimeout(to);if(ctl.signal.aborted)throw Error(ctl.signal.reason==='timeout'?'Hết thời gian chờ Gemini.':'Đã dừng.');throw Error('Không kết nối được tới máy chủ AI. Hãy kiểm tra mạng hoặc cấu hình Supabase.')}
   clearTimeout(to);
+  window.__aiTurnstileToken='';
+  try{if(window.turnstile&&window.__aiTurnstileWidget!==null)window.turnstile.reset(window.__aiTurnstileWidget)}catch(_){}
   if(r.ok){const br=j.promptFeedback&&j.promptFeedback.blockReason;if(br)throw Error('Yêu cầu bị bộ lọc an toàn chặn ('+br+'). Hãy đổi mô tả.');return j}
   if((r.status===503||r.status===429)&&a===0){await new Promise(x=>setTimeout(x,1800));continue}
-  const m=(j.error&&j.error.message)||'';
-  throw Error(r.status===400&&/API key/i.test(m)?'API key không hợp lệ.':r.status===401||r.status===403?'API key bị từ chối hoặc chưa được cấp quyền cho model này.':r.status===404?'Không tìm thấy model "'+model+'" – hãy đổi tên model trong tab AI.':r.status===429?'Vượt hạn mức hoặc tốc độ. Hãy thử lại sau.':r.status===503?'Gemini đang quá tải. Hãy thử lại sau.':'Lỗi '+r.status+(m?': '+m:''))}}
+  const m=j.error||j.message||'';
+  throw Error(r.status===400?'Yêu cầu không hợp lệ: '+m:r.status===401||r.status===403?'Không xác minh được yêu cầu. Hãy tải lại trang và thử lại.':r.status===404?'Không tìm thấy model "'+model+'" – hãy kiểm tra tên model.':r.status===429?'Bạn đã đạt giới hạn sử dụng AI. Hãy thử lại sau.':r.status===503?'Gemini đang quá tải hoặc máy chủ chưa cấu hình đủ secrets.':'Lỗi '+r.status+(m?': '+m:''))}}
 async function shrink(blob,max=1536,q=.88){const im=await bmp(blob),k=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(im.src);return blobOf(c,q)}
 const imgPart=async(b,max)=>({inline_data:{mime_type:'image/jpeg',data:await b64(await shrink(b,max))}});
 function jparse(t){t=String(t||'').replace(/^\s*```(?:json)?/i,'').replace(/```\s*$/,'').trim();try{return JSON.parse(t)}catch(_){const a=t.indexOf('{'),b=t.lastIndexOf('}');if(a>=0&&b>a)try{return JSON.parse(t.slice(a,b+1))}catch(_){}throw Error('AI trả về dữ liệu không đúng định dạng.')}}
@@ -688,7 +829,7 @@ async function saveRes(){if(!resP)return null;const b=resP.blob,m=resP.meta,id=D
 $('rSave').onclick=async()=>{const id=await saveRes();if(id){closeRes();$('gMsg').textContent='Đã lưu ảnh AI (nhãn ✦ AI) vào Thư viện.';$('tiSt').textContent='Đã lưu ảnh AI vào Thư viện.';loadGal()}};
 $('rOpen').onclick=async()=>{const id=await saveRes();if(id){closeRes();openStudio(id)}};
 $('rClose').onclick=closeRes;$('aiRes').onclick=e=>{if(e.target===$('aiRes'))closeRes()};
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('aiRes').classList.contains('on'))closeRes()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('aiRes').classList.contains('on'))closeRes();if(e.key==='Escape'&&$('camSettings').classList.contains('on'))closeSettings()});
 $('gGen').onclick=()=>{if(!cur){$('gMsg').textContent='Hãy chọn ảnh trong Thư viện trước.';return}const k=KINDS[aiKind],t=$('gPr').value.trim();
  if(['free','rm','bg','sty'].includes(aiKind)&&!t){$('gMsg').textContent='Hãy nhập mô tả cho mục “'+k[0]+'”.';return}
  aiRun('Gemini đang tạo ảnh (có thể mất 10–30 giây)',async()=>{const src0=cur.cur||cur.orig,j=await gem($('mImg').value,[{text:k[2](t)},await imgPart(src0,1536)],{responseModalities:['TEXT','IMAGE']},{timeout:120000}),r=imgOf(j);
@@ -758,4 +899,5 @@ $('sceneAsk').onclick=askScene;
 
 
 startCam();
-</script></body></html>
+</script><script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onAiTurnstileLoad" async defer></script>
+</body></html>
