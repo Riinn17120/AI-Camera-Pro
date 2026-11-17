@@ -487,12 +487,27 @@ async function detect(){if(!ov.width)return;const s=src(),cv=cover(s);let box=nu
   for(let y=1;y<127;y++)for(let x=1;x<95;x++){const i=y*96+x,e=Math.abs(lum[i]-lum[i+1])+Math.abs(lum[i]-lum[i+96]),w=e*e+Math.abs(lum[i]-mean);sw+=w;cx+=x*w;cy+=y*w}
   if(sw>0){cx=cx/sw/96*ov.width;cy=cy/sw/128*ov.height;const z=ov.width*.3;box={x:cx-z/2,y:cy-z/2,w:z,h:z}}}
  subj=box?{box,eyes,kind}:null}
-/* Tính khung được đề xuất (chưa áp dụng): zoom + dịch để chủ thể vào điểm 1/3 */
-function plan(){const w=ov.width,h=ov.height,b=subj.box,face=subj.kind==='khuôn mặt',cx=b.x+b.w/2,
- cy=face&&subj.eyes&&subj.eyes.length?subj.eyes.reduce((a,e)=>a+e.y,0)/subj.eyes.length:b.y+b.h*(face?.4:.5);
- const z=Math.max(digital,face?clamp(.36*w/b.w,1,3):1.3),centered=face&&Math.abs(cx-w/2)<.12*w,
- X=centered?w/2:(cx<w/2?w/3:2*w/3),Y=face?h*.36:(cy<h/2?h/3:2*h/3),tx=clamp(X-z*cx,w-z*w,0),ty=clamp(Y-z*cy,h-z*h,0);
- return{z,tx,ty,txt:`Gợi ý: ${z>digital+.05?`zoom ${z.toFixed(1)}× · `:''}${face?'đặt khuôn mặt':'đặt chủ thể'} ${centered?'ở giữa':'vào điểm 1/3'}`}}
+/* Phân tích bối cảnh để đề xuất khung hình thích ứng; không dùng một mức zoom mặc định. */
+function plan(){
+ const w=ov.width,h=ov.height,b=subj.box,face=subj.kind==='khuôn mặt',cx=b.x+b.w/2;
+ const cy=face&&subj.eyes&&subj.eyes.length?subj.eyes.reduce((a,e)=>a+e.y,0)/subj.eyes.length:b.y+b.h*(face?.4:.5);
+ const env=sceneOf();
+ let z=1,why='giữ góc nhìn tự nhiên';
+ if(env==='portrait'&&face){z=clamp(.48*w/Math.max(1,b.w),1.15,2.2);why='làm nổi bật khuôn mặt';}
+ else if(env==='group'){z=1;why='giữ góc rộng để không bỏ sót người';}
+ else if(env==='landscape'){z=1;why='giữ trọn không gian phong cảnh';}
+ else if(env==='sunset'){z=1;why='giữ cả bầu trời và đường chân trời';}
+ else if(env==='night'){z=1;why='hạn chế zoom số để giữ chi tiết trong tối';}
+ else if(env==='backlight'){z=1;why='giữ khung hình ổn định, ưu tiên cân bằng sáng';}
+ else if(env==='doc'){z=1;why='giữ toàn bộ trang tài liệu';}
+ else if(face){z=clamp(.42*w/Math.max(1,b.w),1.1,1.8);why='cân đối khuôn mặt trong khung';}
+ const centered=env==='group'||env==='landscape'||env==='sunset'||env==='doc'||(face&&Math.abs(cx-w/2)<.12*w);
+ const X=centered?w/2:(cx<w/2?w/3:2*w/3);
+ const Y=env==='group'?h/2:(face?h*.36:(cy<h/2?h/3:2*h/3));
+ const tx=clamp(X-z*cx,w-z*w,0),ty=clamp(Y-z*cy,h-z*h,0);
+ const names={portrait:'Chân dung',group:'Ảnh nhóm',backlight:'Ngược sáng',night:'Thiếu sáng',doc:'Tài liệu',sunset:'Hoàng hôn',landscape:'Phong cảnh',general:'Cảnh thông thường'};
+ return{z,tx,ty,txt:`${names[env]||'Phân tích cảnh'} · ${z.toFixed(1)}× · ${why}`};
+}
 function ui(txt,ok,btns=[]){const s=$('sug'),b=$('sugBtn');s.style.display=aiOn?'block':'none';b.style.display=aiOn&&btns.length?'flex':'none';if(!aiOn)return;
  s.textContent=txt;s.classList.toggle('ok',!!ok);const sig=btns.map(x=>x[0]).join();if(sig!==sg.sig){sg.sig=sig;b.innerHTML=btns.map(([id,l,c])=>`<button data-a="${id}" class="${c||''}">${l}</button>`).join('')}}
 const applied=()=>ui(`✅ Đã chuyển khung AI · ${F.z.toFixed(1)}×`,true,[['undo','↩ Hoàn tác','no']]);
