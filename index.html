@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>AI Photo Studio</title>
 <style>
 :root{color-scheme:dark;--bg:#090b10;--cd:#151923;--ln:#29303d;--tx:#f4f2ed;--mu:#9ba3b2;--ac:#d8b77a;--gn:#8fc9aa;--glass:#111722;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px)}
@@ -13,8 +13,8 @@ nav button{flex:1;background:none;border:0;color:var(--mu);padding:10px 0;font:i
 nav button.on{color:var(--ac)}nav i{display:block;font-style:normal;font-size:20px;margin-bottom:2px}nav button{padding:11px 0 9px}
 button,select{font:inherit;color:var(--tx);cursor:pointer}
 /* CAMERA (Oppo 60%) */
-.vf{position:relative;flex:1;min-height:300px;background:#05070b;overflow:hidden;max-width:620px;width:100%;margin:10px auto 0;border:1px solid #ffffff12;border-radius:22px;box-shadow:0 18px 55px #0008;touch-action:none;user-select:none;-webkit-user-select:none}
-.vf video,.vf canvas.fx,.vf canvas.demo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .25s}
+.vf{position:relative;flex:1;min-height:300px;background:#05070b;overflow:hidden;max-width:620px;width:100%;margin:10px auto 0;border:1px solid #ffffff12;border-radius:22px;box-shadow:0 18px 55px #0008;touch-action:none;overscroll-behavior:contain;user-select:none;-webkit-user-select:none}
+.vf video,.vf canvas.fx,.vf canvas.demo{transform-origin:0 0;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .25s}
 #ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .focus-ring{position:absolute;width:54px;height:54px;border:1.5px solid #f2d69b;border-radius:50%;z-index:4;pointer-events:none;display:none;transform:translate(-50%,-50%);filter:drop-shadow(0 2px 5px #000);animation:focusPulse .75s ease-out}
 .focus-ring:before,.focus-ring:after{content:"";position:absolute;background:#f2d69b}
@@ -132,10 +132,7 @@ input[type=range]{width:100%;accent-color:var(--ac)}
 @media(max-width:780px){.gh{flex-wrap:wrap}.gh h2{flex:1 0 100%}.gh .gb{flex:1}.pro{padding:8px 10px}.pro-values{grid-template-columns:repeat(3,minmax(0,1fr))}.pro-param{padding:8px}.viewer{padding:14px}.viewer .vbar{gap:5px}}
 @media(orientation:landscape) and (max-height:620px){.pro{max-width:250px}.pro-values{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
-/* Camera upgrades: manual zoom, looks, settings, theme */
-.zoom-manual{position:absolute;left:50%;bottom:48px;transform:translateX(-50%);z-index:4;display:flex;align-items:center;gap:9px;width:min(78%,360px);padding:6px 12px;border-radius:18px;background:#090d15c9;border:1px solid #ffffff20;backdrop-filter:blur(12px)}
-.zoom-manual span{font:600 12px ui-monospace,monospace;color:#f1d49c;min-width:38px;text-align:center}
-.zoom-manual input{flex:1;min-width:0}
+/* Camera upgrades: looks, settings, theme */
 .look-row{display:flex;gap:6px;overflow-x:auto;padding:3px 0 10px;scrollbar-width:none}
 .look-row::-webkit-scrollbar{display:none}
 .look-chip{flex:none;border:1px solid #ffffff20;background:#202838;color:#d9dce3;border-radius:18px;padding:6px 11px;font-size:11px}
@@ -160,8 +157,8 @@ body[data-theme="light"] .pro-param{background:#fff;color:#18202b;border-color:#
 body[data-theme="light"] .pro-param.on{background:#f7ecd5;border-color:#b28b45}
 body[data-theme="light"] .pnl .sl,body[data-theme="light"] .aipage input,body[data-theme="light"] .aipage textarea,body[data-theme="light"] .aipage select{background:#f2f5f9;color:#18202b;border-color:#d5dce7}
 body[data-theme="light"] .settings-panel .setting-row select{background:#f2f5f9;color:#18202b}
-@media(max-width:780px){.zoom-manual{bottom:48px;width:76%}.look-row{padding-bottom:8px}.settings-overlay{padding:0}.settings-panel{border-radius:20px 20px 0 0;max-height:90%;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}}
-@media(orientation:landscape) and (max-height:620px){.zoom-manual{left:50%;bottom:12px;width:min(44%,260px)}.look-row{max-width:620px;margin:auto}}
+@media(max-width:780px){.look-row{padding-bottom:8px}.settings-overlay{padding:0}.settings-panel{border-radius:20px 20px 0 0;max-height:90%;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}}
+@media(orientation:landscape) and (max-height:620px){.look-row{max-width:620px;margin:auto}}
 \n</style></head><body>
 
 <!-- ===== CAMERA ===== -->
@@ -411,40 +408,29 @@ function setDigitalZoom(v){
  digital=next;F.on=false;sg.p=null;sg.hold=0;sg.until=0;
  $('camNote').textContent='Zoom '+digital.toFixed(1)+'×';
 }
-// Zoom kiểu camera điện thoại: dùng khoảng cách giữa hai ngón tay.
+// Pinch chỉ phóng to phần ảnh camera; khung xem, lưới và nút bấm giữ nguyên.
 let pinchStart=0,pinchZoom=1,pointers=new Map(),pinching=false;
 const vf=$('vf');
 vf.addEventListener('pointerdown',e=>{
  if(e.pointerType==='mouse'&&e.button!==0)return;
+ if(e.target.closest('button,.pill,.lens,.ctrl,.scene,.sugbtn'))return;
  e.preventDefault();
  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
  try{vf.setPointerCapture(e.pointerId)}catch(_){}
- if(pointers.size===2){
-  const a=[...pointers.values()];
-  pinchStart=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);
-  pinchZoom=digital;pinching=true;
- }
+ if(pointers.size===2){const a=[...pointers.values()];pinchStart=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);pinchZoom=digital;pinching=true;}
 },{passive:false});
 vf.addEventListener('pointermove',e=>{
  if(!pointers.has(e.pointerId))return;
- e.preventDefault();
- pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
- if(pointers.size>=2&&pinchStart>0){
-  const a=[...pointers.values()];
-  const dist=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);
-  setDigitalZoom(pinchZoom*dist/pinchStart);
- }
+ e.preventDefault();pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ if(pointers.size>=2&&pinchStart>0){const a=[...pointers.values()];const dist=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);setDigitalZoom(pinchZoom*dist/pinchStart);}
 },{passive:false});
-['pointerup','pointercancel','lostpointercapture'].forEach(n=>vf.addEventListener(n,e=>{
- pointers.delete(e.pointerId);
- if(pointers.size<2){pinchStart=0;pinching=false}
-},{passive:true}));
+['pointerup','pointercancel','lostpointercapture'].forEach(n=>vf.addEventListener(n,e=>{pointers.delete(e.pointerId);if(pointers.size<2){pinchStart=0;pinching=false;}},{passive:true}));
 
 /* Chạm để lấy nét: ưu tiên điểm lấy nét phần cứng nếu trình duyệt/thiết bị hỗ trợ. */
 let focusTimer=0;
 async function focusAt(ev){
- if(!stream||!track||!vid.videoWidth||pointers.size>0)return;
- if(ev.target.closest('button,.sugbtn,.top,.lens,.ctrl,.scene,.zoom-manual'))return;
+ if(!stream||!track||!vid.videoWidth||pointers.size>1)return;
+ if(ev.target.closest('button,.sugbtn,.top,.lens,.ctrl,.scene'))return;
  const rect=ov.getBoundingClientRect(),px=ev.clientX-rect.left,py=ev.clientY-rect.top;
  const ring=$('focusRing');ring.style.left=px+'px';ring.style.top=py+'px';ring.style.display='block';
  ring.style.animation='none';void ring.offsetWidth;ring.style.animation='';
@@ -524,7 +510,7 @@ $('sugBtn').onclick=e=>{const a=e.target.dataset.a;if(a==='yes')accept();else if
 /* Chuyển khung mượt tới đích: khung đã đồng ý, hoặc khung gốc theo ống kính */
 function step(){const w=ov.width,h=ov.height;if(F.on){T.z=F.z;T.tx=F.tx;T.ty=F.ty}else{T.z=digital;T.tx=w*(1-digital)/2;T.ty=h*(1-digital)/2}
  let c=0;for(const p of['z','tx','ty']){const d=T[p]-V[p];if(Math.abs(d)>(p==='z'?.002:.3)){V[p]+=d*.12;c=1}}
- if(c||!V.init){V.init=1;vid.style.transform=demo.style.transform=`translate(${V.tx}px,${V.ty}px) scale(${V.z})`}}
+ if(c||!V.init){V.init=1;const mediaTransform=`translate(${V.tx}px,${V.ty}px) scale(${V.z})`;vid.style.transform=mediaTransform;demo.style.transform=mediaTransform;}}
 function crop(s){const W=s.videoWidth||480,H=s.videoHeight||640,r=Math.max(ov.width/W,ov.height/H),ox=(W*r-ov.width)/2,oy=(H*r-ov.height)/2,z=V.z;return[(-V.tx/z+ox)/r,(-V.ty/z+oy)/r,ov.width/z/r,ov.height/z/r]}
 /* chỉ phân tích khi bật AI; điều tốc ~25% CPU, tạm dừng khi ẩn tab */
 (async function loop(){const t0=performance.now();if(aiOn&&!document.hidden&&$('t-cam').classList.contains('on')){try{await detect();suggest();sceneStep()}catch(_){}}setTimeout(loop,Math.max(220,(performance.now()-t0)*3))})();
