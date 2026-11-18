@@ -7,7 +7,7 @@
 
 /* ============ 1) CẤU HÌNH GEMINI API KEY TẠM THỜI ============ */
 // CHỈ DÙNG TEST CỤC BỘ. KHÔNG ĐƯA FILE NÀY LÊN WEBSITE/GITHUB CÔNG KHAI.
-const GEMINI_API_KEY = 'AQ.Ab8RN6JNHszM-6ILXPjmcCOJEElawXO0dZvBWB9fgJ0EsAiEUQ';
+const GEMINI_API_KEY = 'AQ.Ab8RN6LUaKu0Fpm5_e-wKCtyqG36uW1V1oNuo6Ubdjzvf3F1yA';
 const aiBackendReady = () =>
   typeof GEMINI_API_KEY === 'string' &&
   GEMINI_API_KEY.length > 20 &&
