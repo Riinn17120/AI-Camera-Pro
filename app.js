@@ -25,6 +25,16 @@ $('captureFrame').value=readSetting('frame','none');
 $('captureStamp').checked=readSetting('stamp','false')==='true';
 $('uiTheme').value=readSetting('theme','dark');
 document.body.dataset.theme=$('uiTheme').value;
+/* Khung hình chụp: 4:3 · 1:1 · 16:9 · Full */
+const ASPECTS={'full':0,'4:3':4/3,'1:1':1,'16:9':16/9},ASP_LABEL={'full':'Full','4:3':'4:3','1:1':'1:1','16:9':'16:9'};
+let aspect=readSetting('aspect','4:3');if(!(aspect in ASPECTS))aspect='4:3';
+function setAspect(v){aspect=v;saveSetting('aspect',v);$('bAspect').textContent=ASP_LABEL[v];$('captureAspect').value=v}
+setAspect(aspect);
+$('bAspect').onclick=()=>{const k=['4:3','1:1','16:9','full'];setAspect(k[(k.indexOf(aspect)+1)%k.length])};
+$('captureAspect').onchange=()=>setAspect($('captureAspect').value);
+function frameRect(){const w=ov.width,h=ov.height,a=ASPECTS[aspect];if(!a)return{x:0,y:0,w,h};
+ const ratio=h>=w?1/a:a;let fw=w,fh=w/ratio;if(fh>h){fh=h;fw=h*ratio}
+ return{x:(w-fw)/2,y:(h-fh)/2,w:fw,h:fh}}
 $('bSettings').onclick=()=>{$('camSettings').classList.add('on');$('camSettings').setAttribute('aria-hidden','false')};
 function closeSettings(){$('camSettings').classList.remove('on');$('camSettings').setAttribute('aria-hidden','true')}
 $('settingsClose').onclick=closeSettings;
@@ -48,9 +58,10 @@ function decorateCapture(canvas){
 /* ---------- CAMERA ---------- */
 const vid=$('vid'),demo=$('demo'),ov=$('ov');
 const RES={FHD:{w:1920,h:1080,cap:1920},'4K':{w:3840,h:2160,cap:3840},'8K':{w:7680,h:4320,cap:7680}};
-let stream,track,ic,photoCaps,camCaps={},hardwareEV=false,facing='environment',lenses=[],curLens=1,digital=1,mode='photo',aiOn=false,gridOn=true,P={ev:0,iso:100,wb:5500,ct:0},activeLook='natural',resK=RES[localStorage.getItem('res')]?localStorage.getItem('res'):'4K',baseNote='';
+let stream,track,ic,photoCaps,camCaps={},hardwareEV=false,facing='environment',lenses=[],curLens=1,digital=1,mode='photo',aiOn=false,gridOn=readSetting('grid','true')==='true',P={ev:0,iso:100,wb:5500,ct:0},activeLook='natural',resK=RES[localStorage.getItem('res')]?localStorage.getItem('res'):'4K',baseNote='';
 const note=t=>$('camNote').textContent=t;
-$('bRes').textContent='📐 '+resK;$('bRes').onclick=()=>{resK=resK==='FHD'?'4K':resK==='4K'?'8K':'FHD';localStorage.setItem('res',resK);$('bRes').textContent='📐 '+resK;if(stream)startCam()};
+$('captureRes').value=resK;$('captureRes').onchange=()=>{resK=$('captureRes').value;localStorage.setItem('res',resK);if(stream)startCam()};
+$('captureGrid').checked=gridOn;$('captureGrid').onchange=()=>{gridOn=$('captureGrid').checked;saveSetting('grid',gridOn)};
 
 function readCameraCaps(){
  try{camCaps=track&&track.getCapabilities?track.getCapabilities():{}}catch(_){camCaps={}}
@@ -78,11 +89,11 @@ async function applyRealCameraControl(key,value){
 }
 
 let tt=0;setInterval(()=>{if(stream)return;const c=demo.getContext('2d'),w=480,h=640,g=c.createLinearGradient(0,0,0,h);g.addColorStop(0,'#5b8def');g.addColorStop(.55,'#ffb27a');g.addColorStop(1,'#2d3b2a');c.fillStyle=g;c.fillRect(0,0,w,h);const x=170+Math.sin(tt)*50;c.fillStyle='#e8d7c3';c.beginPath();c.arc(x,260,38,0,7);c.fill();c.fillRect(x-30,300,60,150);c.fillStyle='#222';c.beginPath();c.arc(x-12,254,4,0,7);c.arc(x+12,254,4,0,7);c.fill();tt+=.04},60);
-async function startCam(){try{stream&&stream.getTracks().forEach(t=>t.stop());F.on=false;sg.p=null;sg.hold=0;const R=RES[resK];
+async function startCam(){try{stream&&stream.getTracks().forEach(t=>t.stop());F.on=false;sg.p=null;sg.hold=0;hwZoom=1;digital=1;const R=RES[resK];
  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:R.w},height:{ideal:R.h}},audio:false});
  vid.srcObject=stream;await vid.play();vid.style.display='block';demo.style.display='none';track=stream.getVideoTracks()[0];
  ic=window.ImageCapture?new ImageCapture(track):null;photoCaps=null;if(ic)try{photoCaps=await ic.getPhotoCapabilities()}catch(_){}
- await detectLenses();const st=track.getSettings(),actualW=st.width||vid.videoWidth,actualH=st.height||vid.videoHeight;
+ await detectLenses();showZoom();const st=track.getSettings(),actualW=st.width||vid.videoWidth,actualH=st.height||vid.videoHeight;
  const hi=photoCaps&&photoCaps.imageWidth&&photoCaps.imageHeight?` · ảnh tĩnh tối đa ${photoCaps.imageWidth.max}×${photoCaps.imageHeight.max}`:'';
  const meets=Math.max(actualW,actualH)>=R.w&&Math.min(actualW,actualH)>=R.h;
  baseNote=`Yêu cầu ${resK} · luồng thực tế ${actualW}×${actualH}${hi}${meets?'':' · camera không đạt độ phân giải yêu cầu'}`;note(baseNote);readCameraCaps()}
@@ -92,13 +103,20 @@ async function detectLenses(){const devs=(await navigator.mediaDevices.enumerate
  lenses=[];if(uw)lenses.push({z:.6,dev:uw.deviceId,t:'0.6'});lenses.push({z:1,t:'1×'});
  const hz=cap.zoom?cap.zoom.max:1;
  [2,3,5].forEach(z=>{if(z===3&&tele)lenses.push({z:3,dev:tele.deviceId,t:'3×',tele:1});else lenses.push({z,hw:hz>=z,t:z+'×'})});
- $('lens').innerHTML=lenses.map((l,i)=>`<button data-i="${i}" class="${l.z===1?'on':''}">${l.t}</button>`).join('')}
-$('lens').onclick=async e=>{const i=e.target.dataset.i;if(i==null)return;const l=lenses[i];document.querySelectorAll('#lens button').forEach(b=>b.classList.toggle('on',b===e.target));curLens=l.z;digital=1;F.on=false;sg.p=null;pinchStart=0;pinchZoom=1;
- if(stream&&l.dev){try{stream.getTracks().forEach(t=>t.stop());stream=await navigator.mediaDevices.getUserMedia({video:{deviceId:{exact:l.dev},width:{ideal:RES[resK].w},height:{ideal:RES[resK].h}}});vid.srcObject=stream;vid.play().catch(()=>{});track=stream.getVideoTracks()[0];ic=window.ImageCapture?new ImageCapture(track):null;photoCaps=null;ic&&ic.getPhotoCapabilities().then(c=>photoCaps=c).catch(()=>{});$('camNote').textContent='Dùng ống kính '+l.t+' (phần cứng)';return}catch(_){}}
- if(l.z<1){digital=1;$('camNote').textContent='Máy không có góc siêu rộng – dùng 1×';return}
- if(l.z>1){if(l.hw&&track){try{await track.applyConstraints({advanced:[{zoom:l.z}]});$('camNote').textContent='Zoom quang/phần cứng '+l.t;return}catch(_){}}
-  digital=l.z;$('camNote').textContent=l.tele?'':'Máy không có tele → zoom số '+l.t+' (cắt khung, chất lượng giảm)'}else $('camNote').textContent='';
- applyView()};
+ $('lensOpts').innerHTML=lenses.map((l,i)=>`<button data-i="${i}" class="${l.z===1?'on':''}">${l.t}</button>`).join('')}
+let hwZoom=1;
+const zoomLabel=z=>(Math.round(z*10)/10).toString().replace(/\.0$/,'')+'×';
+function showZoom(){const z=hwZoom*digital;$('lensMain').textContent=zoomLabel(z);document.querySelectorAll('#lensOpts button').forEach(b=>{const l=lenses[b.dataset.i];b.classList.toggle('on',!!l&&Math.abs(l.z-z)<.05)})}
+$('lens').onclick=async e=>{const t=e.target.closest('button');if(!t)return;
+ if(t.id==='lensMain'){$('lens').classList.toggle('open');return}
+ const i=t.dataset.i;if(i==null)return;const l=lenses[i];$('lens').classList.remove('open');
+ curLens=l.z;digital=1;hwZoom=1;F.on=false;sg.p=null;pinchStart=0;pinchZoom=1;
+ if(stream&&l.dev){try{stream.getTracks().forEach(t=>t.stop());stream=await navigator.mediaDevices.getUserMedia({video:{deviceId:{exact:l.dev},width:{ideal:RES[resK].w},height:{ideal:RES[resK].h}}});vid.srcObject=stream;vid.play().catch(()=>{});track=stream.getVideoTracks()[0];ic=window.ImageCapture?new ImageCapture(track):null;photoCaps=null;ic&&ic.getPhotoCapabilities().then(c=>photoCaps=c).catch(()=>{});hwZoom=l.z;showZoom();$('camNote').textContent='Dùng ống kính '+l.t+' (phần cứng)';return}catch(_){}}
+ if(l.z<1){digital=1;showZoom();$('camNote').textContent='Máy không có góc siêu rộng – dùng 1×';return}
+ if(l.z>1){if(l.hw&&track){try{await track.applyConstraints({advanced:[{zoom:l.z}]});hwZoom=l.z;showZoom();$('camNote').textContent='Zoom quang/phần cứng '+l.t;return}catch(_){}}
+  digital=l.z;$('camNote').textContent=l.tele?'':'Máy không có tele → zoom số '+l.t+' (cắt khung, chất lượng giảm)'}
+ else{if(track&&camCaps.zoom){try{await track.applyConstraints({advanced:[{zoom:Math.max(1,camCaps.zoom.min||1)}]})}catch(_){}}$('camNote').textContent=''}
+ showZoom();applyView()};
 function applyView(){
  const evFallback=hardwareEV?1:Math.pow(2,P.ev);
  const f=`brightness(${evFallback}) contrast(${1+P.ct/100})`;
@@ -107,12 +125,16 @@ function applyView(){
  [vid,demo].forEach(e=>{e.style.filter=`${f} ${look}`});
 }
 const lookFilters={natural:'none',cinema:'contrast(1.18) saturate(1.12) sepia(.08)',warm:'sepia(.18) saturate(1.25) contrast(1.04)',moody:'contrast(1.28) saturate(.78) brightness(.92)',vintage:'sepia(.28) contrast(.92) saturate(.82)',mono:'grayscale(1) contrast(1.12)'};
-document.querySelectorAll('.look-chip').forEach(b=>b.onclick=()=>{activeLook=b.dataset.look;document.querySelectorAll('.look-chip').forEach(x=>x.classList.toggle('on',x===b));applyView()});
+document.querySelectorAll('.look-chip').forEach(b=>b.onclick=()=>{activeLook=b.dataset.look;document.querySelectorAll('.look-chip').forEach(x=>x.classList.toggle('on',x===b));$('lookName').textContent=b.textContent;applyView();closeLook()});
+function openLook(){$('lookSheet').classList.add('on');$('lookSheet').setAttribute('aria-hidden','false')}
+function closeLook(){$('lookSheet').classList.remove('on');$('lookSheet').setAttribute('aria-hidden','true')}
+$('bLook').onclick=openLook;$('lookClose').onclick=closeLook;$('lookSheet').addEventListener('click',e=>{if(e.target===$('lookSheet'))closeLook()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('lookSheet').classList.contains('on'))closeLook()});
 function setDigitalZoom(v){
  const next=clamp(+v,1,5);
  if(Math.abs(next-digital)<.015)return;
  digital=next;F.on=false;sg.p=null;sg.hold=0;sg.until=0;
- $('camNote').textContent='Zoom '+digital.toFixed(1)+'×';
+ showZoom();
 }
 let pinchStart=0,pinchZoom=1,pointers=new Map(),pinching=false;
 const vf=$('vf');
@@ -156,8 +178,8 @@ async function focusAt(ev){
 $('vf').addEventListener('pointerdown',focusAt,{passive:true});
 
 $('flip').onclick=()=>{facing=facing==='environment'?'user':'environment';startCam()};
-$('bFlash').onclick=async e=>{const on=e.target.dataset.on!=='1';try{await track.applyConstraints({advanced:[{torch:on}]});e.target.dataset.on=on?1:0;e.target.textContent=on?'⚡ Bật':'⚡ Tắt'}catch(_){e.target.textContent='⚡ N/A'}};
-$('bGrid').onclick=()=>{gridOn=!gridOn};$('bAI').onclick=e=>{aiOn=!aiOn;F.on=false;sg.p=null;sg.q=null;sg.hold=0;sg.until=0;subj=null;e.target.classList.toggle('on',aiOn);e.target.textContent='✨ AI: '+(aiOn?'Bật':'Tắt');ui('✨ AI đang tìm chủ thể…',false);sceneReset()};
+$('bFlash').onclick=async()=>{const b=$('bFlash'),on=b.dataset.on!=='1';try{await track.applyConstraints({advanced:[{torch:on}]});b.dataset.on=on?1:0;b.classList.toggle('on',on);b.classList.remove('na')}catch(_){b.classList.add('na');note('Thiết bị không hỗ trợ đèn flash')}};
+$('bAI').onclick=e=>{aiOn=!aiOn;F.on=false;sg.p=null;sg.q=null;sg.hold=0;sg.until=0;subj=null;$('bAI').classList.toggle('on',aiOn);ui('AI đang tìm chủ thể…',false);sceneReset()};
 $('modes').onclick=e=>{const m=e.target.dataset.m;if(!m)return;mode=m;document.querySelectorAll('#modes b').forEach(b=>b.classList.toggle('on',b===e.target));$('pro').classList.toggle('on',m==='pro');
  const pre={photo:[0,100,5500,0],portrait:[.2,100,5800,8],night:[0,100,5200,0],pro:[P.ev,P.iso,P.wb,P.ct]}[m];[P.ev,P.iso,P.wb,P.ct]=pre;syncPro();applyView();
  if(camCaps.iso)applyRealCameraControl('iso',P.iso);
@@ -176,17 +198,20 @@ prs.forEach(([i,k,o,f])=>$(i).oninput=async()=>{
  if(k==='iso'){const ok=await applyRealCameraControl('iso',P.iso);if(!ok){$(i).disabled=true;$(o).textContent='N/A';note('Thiết bị không cho phép chỉnh ISO thủ công')}}
  if(k==='wb'){const ok=await applyRealCameraControl('colorTemperature',P.wb);if(!ok){$(i).disabled=true;$(o).textContent='N/A';note('Thiết bị không cho phép chỉnh nhiệt độ màu thủ công')}}
 });
+
 const src=()=>stream?vid:demo;
 
 /* Chuyển khung mượt tới đích (state F, V, T nằm trong ai-engine.js) */
 function step(){const w=ov.width,h=ov.height;if(F.on){T.z=F.z;T.tx=F.tx;T.ty=F.ty}else{T.z=digital;T.tx=w*(1-digital)/2;T.ty=h*(1-digital)/2}
  let c=0;for(const p of['z','tx','ty']){const d=T[p]-V[p];if(Math.abs(d)>(p==='z'?.002:.3)){V[p]+=d*.12;c=1}}
  if(c||!V.init){V.init=1;const mediaTransform=`translate(${V.tx}px,${V.ty}px) scale(${V.z})`;vid.style.transform=mediaTransform;demo.style.transform=mediaTransform;}}
-function crop(s){const W=s.videoWidth||480,H=s.videoHeight||640,r=Math.max(ov.width/W,ov.height/H),ox=(W*r-ov.width)/2,oy=(H*r-ov.height)/2,z=V.z;return[(-V.tx/z+ox)/r,(-V.ty/z+oy)/r,ov.width/z/r,ov.height/z/r]}
+function crop(s,framed){const W=s.videoWidth||480,H=s.videoHeight||640,r=Math.max(ov.width/W,ov.height/H),ox=(W*r-ov.width)/2,oy=(H*r-ov.height)/2,z=V.z,f=framed?frameRect():{x:0,y:0,w:ov.width,h:ov.height};return[((f.x-V.tx)/z+ox)/r,((f.y-V.ty)/z+oy)/r,f.w/z/r,f.h/z/r]}
 /* Vòng lặp AI: chỉ chạy khi bật AI, tạm dừng khi ẩn tab */
 (async function loop(){const t0=performance.now();if(aiOn&&!document.hidden&&$('t-cam').classList.contains('on')){try{await detect();suggest();sceneStep()}catch(_){}}setTimeout(loop,Math.max(220,(performance.now()-t0)*3))})();
 function drawOv(){const c=ov.getContext('2d'),r=ov.getBoundingClientRect();if(ov.width!==r.width)ov.width=r.width,ov.height=r.height;const w=ov.width,h=ov.height;c.clearRect(0,0,w,h);
- if(gridOn){c.strokeStyle='#fff5';c.lineWidth=1;c.beginPath();[1,2].forEach(i=>{c.moveTo(w*i/3,0);c.lineTo(w*i/3,h);c.moveTo(0,h*i/3);c.lineTo(w,h*i/3)});c.stroke()}
+ const fr=frameRect();
+ if(gridOn){c.strokeStyle='#fff5';c.lineWidth=1;c.beginPath();[1,2].forEach(i=>{c.moveTo(fr.x+fr.w*i/3,fr.y);c.lineTo(fr.x+fr.w*i/3,fr.y+fr.h);c.moveTo(fr.x,fr.y+fr.h*i/3);c.lineTo(fr.x+fr.w,fr.y+fr.h*i/3)});c.stroke()}
+ if(aspect!=='full'){c.fillStyle='#000a';c.fillRect(0,0,w,fr.y);c.fillRect(0,fr.y+fr.h,w,h-fr.y-fr.h);c.fillRect(0,fr.y,fr.x,fr.h);c.fillRect(fr.x+fr.w,fr.y,w-fr.x-fr.w,fr.h);c.strokeStyle='#fff8';c.lineWidth=1;c.strokeRect(fr.x+.5,fr.y+.5,fr.w-1,fr.h-1)}
  const X=x=>x*V.z+V.tx,Y=y=>y*V.z+V.ty;
  if(aiOn&&subj){const b=subj.box;c.strokeStyle=subj.kind==='khuôn mặt'?'#34d399':'#ff7a1a';c.lineWidth=2;c.strokeRect(X(b.x),Y(b.y),b.w*V.z,b.h*V.z);
   if(subj.eyes)subj.eyes.forEach(p=>{c.beginPath();c.arc(X(p.x),Y(p.y),4,0,7);c.fillStyle='#34d399';c.fill()})}
@@ -258,7 +283,7 @@ async function hiResShot(cr,R){const pc=photoCaps,Wv=vid.videoWidth,Hv=vid.video
  const f=im.width/Wv,sw=cr[2]*f,sh=cr[3]*f,k=Math.min(1,R.cap/Math.max(sw,sh)),w=Math.round(sw*k),h=Math.round(sh*k),c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,cr[0]*f,cr[1]*f,sw,sh,0,0,w,h);return c}
 function adjust(c){const b=hardwareEV?1:Math.pow(2,P.ev),ct=1+P.ct/100;if(Math.abs(b-1)<.01&&Math.abs(ct-1)<.01)return c;const c2=document.createElement('canvas');c2.width=c.width;c2.height=c.height;const x=c2.getContext('2d');x.filter=`brightness(${b}) contrast(${ct})`;x.drawImage(c,0,0);return c2}
 $('shut').onclick=async()=>{if(busy)return;const delay=+$('captureTimer').value;if(delay>0){$('shut').disabled=true;for(let n=delay;n>0;n--){note('Chụp sau '+n+' giây…');await new Promise(r=>setTimeout(r,1000))}$('shut').disabled=false}busy=true;$('shut').style.opacity=.5;
- try{const s=src(),R=RES[resK],cr=crop(s),L=Math.max(cr[2],cr[3]);let k=Math.min(1,R.cap/L),cv,info='';
+ try{const s=src(),R=RES[resK],cr=crop(s,true),L=Math.max(cr[2],cr[3]);let k=Math.min(1,R.cap/L),cv,info='';
   if(mode==='night'&&stream){k=Math.min(k,Math.sqrt(12.7e6/(cr[2]*cr[3])));const N=cr[2]*cr[3]*k*k>9e6?6:8,r=await stackShot(s,cr,k,{N,label:'Chụp đêm',skip:1,maxMad:35,thr:50,rc:4,T1:18,s1:2,T2:10,s2:1,tone:1,cs:1.12});cv=r.c;info=`xếp chồng ${r.used}/${N} khung`}
   else{if(stream&&hiOK()&&R.cap>2200){try{cv=await hiResShot(cr,R);info='ảnh tĩnh gốc cảm biến'}catch(_){cv=null}}
    if(!cv){if(stream&&meanLuma(s)<80){k=Math.min(k,Math.sqrt(12.7e6/(cr[2]*cr[3])));const r=await stackShot(s,cr,k,{N:3,label:'Thiếu sáng',maxMad:30,thr:44,rc:2,T1:8,s1:1});cv=r.c;info=`cảnh tối: gộp ${r.used}/3 khung`}
@@ -279,14 +304,14 @@ async function showPhotoPreview(id){
  const photo=await dbGet(id);if(!photo)return;viewerPhotoId=id;releaseViewerUrl();
  const blob=photo.cur||photo.orig;viewerUrl=URL.createObjectURL(blob);$('vImg').src=viewerUrl;
  $('vInfo').textContent=`${photo.p?'Đã chỉnh sửa':'Ảnh gốc'} · ${new Date(photo.t).toLocaleString('vi-VN')}`;
- $('vFav').textContent=photo.favorite?'♥ Đã thích':'♡ Yêu thích';$('imgViewer').classList.add('on');$('imgViewer').setAttribute('aria-hidden','false');
+ $('vFav').textContent=photo.favorite?'Đã thích':'Yêu thích';$('imgViewer').classList.add('on');$('imgViewer').setAttribute('aria-hidden','false');
 }
 function closePhotoPreview(){$('imgViewer').classList.remove('on');$('imgViewer').setAttribute('aria-hidden','true');$('vImg').removeAttribute('src');releaseViewerUrl();viewerPhotoId=null}
 async function stepViewer(d){const i=galVisible.findIndex(p=>p.id===viewerPhotoId),n=i+d;if(n>=0&&n<galVisible.length)await showPhotoPreview(galVisible[n].id)}
 $('galBody').onclick=e=>{const tile=e.target.closest('[data-id]');if(!tile)return;const id=+tile.dataset.id;if(galSelectMode){galSelected.has(id)?galSelected.delete(id):galSelected.add(id);updateSelectionUI();loadGal();return}showPhotoPreview(id)};
 $('vClose').onclick=closePhotoPreview;$('imgViewer').onclick=e=>{if(e.target===$('imgViewer'))closePhotoPreview()};
 $('vPrev').onclick=()=>stepViewer(-1);$('vNext').onclick=()=>stepViewer(1);
-$('vFav').onclick=async()=>{if(viewerPhotoId===null)return;const p=await dbGet(viewerPhotoId);p.favorite=!p.favorite;await dbPut(p);$('vFav').textContent=p.favorite?'♥ Đã thích':'♡ Yêu thích';loadGal()};
+$('vFav').onclick=async()=>{if(viewerPhotoId===null)return;const p=await dbGet(viewerPhotoId);p.favorite=!p.favorite;await dbPut(p);$('vFav').textContent=p.favorite?'Đã thích':'Yêu thích';loadGal()};
 $('vEdit').onclick=()=>{if(viewerPhotoId!==null){const id=viewerPhotoId;closePhotoPreview();openStudio(id)}};
 document.addEventListener('keydown',e=>{if(!$('imgViewer').classList.contains('on'))return;if(e.key==='Escape')closePhotoPreview();if(e.key==='ArrowLeft')stepViewer(-1);if(e.key==='ArrowRight')stepViewer(1)});
 $('bImp').onclick=()=>$('fImp').click();
@@ -308,7 +333,7 @@ async function loadGal(){const all=(await dbAll()).sort((x,y)=>y.t-x.t),g=$('gal
  const qy=$('gQ').value.trim().toLowerCase();galVisible=all.filter(p=>(!galTag||(p.tags||[]).includes(galTag))&&(!qy||[(p.tags||[]).join(' '),p.scene||'',p.desc||'',p.aiPrompt||''].join(' ').toLowerCase().includes(qy))&&(galFilter!=='fav'||p.favorite)&&(galFilter!=='ai'||p.ai||p.src==='gemini'));
  if(!galVisible.length){g.innerHTML='<div class="empty">Không có ảnh khớp bộ lọc.</div>';return}
  const days={};galVisible.forEach(p=>(days[new Date(p.t).toLocaleDateString('vi-VN',{weekday:'long',day:'numeric',month:'numeric'})]??=[]).push(p));
- g.innerHTML=Object.entries(days).map(([d,l])=>`<div class="day">${d}</div><div class="grid">${l.map(p=>`<div data-id="${p.id}" class="${galSelected.has(p.id)?'selected':''}" style="background-image:url(${p.thumb})">${galSelectMode&&galSelected.has(p.id)?'<i class="selmark">✓</i>':''}${p.favorite?'<span>♥</span>':''}${p.ai||p.src==='gemini'?'<span class="ai">✦ AI</span>':''}${p.p?'<span>✎</span>':''}</div>`).join('')}</div>`).join('')}
+ g.innerHTML=Object.entries(days).map(([d,l])=>`<div class="day">${d}</div><div class="grid">${l.map(p=>`<div data-id="${p.id}" class="${galSelected.has(p.id)?'selected':''}" style="background-image:url(${p.thumb})">${galSelectMode&&galSelected.has(p.id)?'<i class="selmark">✓</i>':''}${p.favorite?'<span>Thích</span>':''}${p.ai||p.src==='gemini'?'<span class="ai">AI</span>':''}${p.p?'<span>Đã sửa</span>':''}</div>`).join('')}</div>`).join('')}
 $('gQ').oninput=()=>loadGal();$('gTags').onclick=e=>{const t=e.target.closest('[data-t]');if(!t)return;galTag=galTag===t.dataset.t?'':t.dataset.t;loadGal()};
 $('bGenNew').onclick=()=>go('ai');
 
@@ -358,7 +383,7 @@ function postFx(img,e,sc=1){const nr=e.nr||0,sp=e.sp||0,cl=e.cl||0;if(!(nr||sp||
  else for(let i=0,p=0;i<n;i++,p+=4){const dy=Y[i]-Y0[i];d[p]+=dy;d[p+1]+=dy;d[p+2]+=dy}}
 async function fullRender(){const im=srcBmp,r=cropR||[0,0,1,1],x0=Math.round(r[0]*im.width),y0=Math.round(r[1]*im.height),cw=Math.max(1,Math.round(r[2]*im.width)),ch=Math.max(1,Math.round(r[3]*im.height)),c=document.createElement('canvas');c.width=cw;c.height=ch;const x=c.getContext('2d');x.drawImage(im,x0,y0,cw,ch,0,0,cw,ch);
  const s=x.getImageData(0,0,cw,ch),o=x.createImageData(cw,ch);proc(s,o,E);postFx(o,E,Math.max(1,Math.round(cw/1400)));x.putImageData(o,0,0);return blobOf(c)}
-$('sSave').onclick=async()=>{if(!cur)return;$('gMsg').textContent='Đang xuất ảnh đầy đủ độ phân giải…';const b=await fullRender();cur.cur=b;cur.p={...E,cr:cropR};cur.thumb=await thumbOf(b);await dbPut(cur);$('gMsg').textContent='Đã lưu – ảnh gốc vẫn được giữ nguyên, bấm ↺ Gốc để quay lại.'};
+$('sSave').onclick=async()=>{if(!cur)return;$('gMsg').textContent='Đang xuất ảnh đầy đủ độ phân giải…';const b=await fullRender();cur.cur=b;cur.p={...E,cr:cropR};cur.thumb=await thumbOf(b);await dbPut(cur);$('gMsg').textContent='Đã lưu – ảnh gốc vẫn được giữ nguyên, bấm Gốc để quay lại.'};
 $('sRst').onclick=async()=>{if(!cur)return;setE({});preN='';document.querySelectorAll('#presets .chip').forEach(b=>b.classList.remove('on'));if(cropR){cropR=null;await buildBase()}render();pushH()};
 
 /* ---------- KHỞI ĐỘNG ---------- */
