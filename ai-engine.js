@@ -5,48 +5,13 @@
    initAI(), được app.js gọi sau khi mọi thứ đã sẵn sàng.
    ===================================================================== */
 
-/* ============ 1) CẤU HÌNH GEMINI QUA SUPABASE ============ */
-// Điền sau khi tạo Supabase + Cloudflare Turnstile. KHÔNG đặt GEMINI_API_KEY ở đây.
-const SUPABASE_URL = 'https://YOUR_PROJECT_REF.supabase.co';
-const SUPABASE_PUBLISHABLE_KEY = 'YOUR_SUPABASE_PUBLISHABLE_KEY';
-const TURNSTILE_SITE_KEY = 'YOUR_CLOUDFLARE_TURNSTILE_SITE_KEY';
-window.__aiTurnstileToken = '';
-window.__aiTurnstileWidget = null;
-window.onAiTurnstileLoad = function(){
-  if (!window.turnstile || !TURNSTILE_SITE_KEY || TURNSTILE_SITE_KEY.startsWith('YOUR_')) return;
-  const el = document.getElementById('cf-turnstile');
-  if (!el || window.__aiTurnstileWidget !== null) return;
-  window.__aiTurnstileWidget = window.turnstile.render(el, {
-    sitekey: TURNSTILE_SITE_KEY,
-    theme: 'auto',
-    callback: token => { window.__aiTurnstileToken = token; },
-    'expired-callback': () => { window.__aiTurnstileToken = ''; },
-    'error-callback': () => { window.__aiTurnstileToken = ''; }
-  });
-};
+/* ============ 1) CẤU HÌNH GEMINI API KEY TẠM THỜI ============ */
+// CHỈ DÙNG TEST CỤC BỘ. KHÔNG ĐƯA FILE NÀY LÊN WEBSITE/GITHUB CÔNG KHAI.
+const GEMINI_API_KEY = 'AQ.Ab8RN6JNHszM-6ILXPjmcCOJEElawXO0dZvBWB9fgJ0EsAiEUQ';
 const aiBackendReady = () =>
-  /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(SUPABASE_URL) &&
-  !SUPABASE_URL.includes('YOUR_PROJECT_REF') &&
-  SUPABASE_PUBLISHABLE_KEY.length > 20 &&
-  !SUPABASE_PUBLISHABLE_KEY.includes('YOUR_') &&
-  TURNSTILE_SITE_KEY.length > 10 &&
-  !TURNSTILE_SITE_KEY.includes('YOUR_');
-
-async function aiTurnstileToken(){
-  if (!aiBackendReady()) throw Error('Chưa cấu hình Supabase/Turnstile. Hãy làm theo README trong gói cài đặt.');
-  if (!window.turnstile || window.__aiTurnstileWidget === null) throw Error('Chưa tải được xác minh chống bot. Hãy tải lại trang.');
-  if (window.__aiTurnstileToken) return window.__aiTurnstileToken;
-  return await new Promise((resolve,reject)=>{
-    const started=Date.now();
-    const poll=()=>{
-      if(window.__aiTurnstileToken){resolve(window.__aiTurnstileToken);return;}
-      if(Date.now()-started>120000){reject(Error('Chưa hoàn tất xác minh chống bot. Hãy thử lại.'));return;}
-      setTimeout(poll,250);
-    };
-    try{window.turnstile.reset(window.__aiTurnstileWidget);}catch(_){}
-    poll();
-  });
-}
+  typeof GEMINI_API_KEY === 'string' &&
+  GEMINI_API_KEY.length > 20 &&
+  !GEMINI_API_KEY.includes('DAN_API_KEY');
 
 /* ============ 2) TIỆN ÍCH ============ */
 const ls=(k,d='')=>{try{return localStorage.getItem(k)??d}catch(_){return d}},lset=(k,v)=>{try{localStorage.setItem(k,v)}catch(_){}};
@@ -54,23 +19,44 @@ const ss=(k,d='')=>{try{return sessionStorage.getItem(k)??d}catch(_){return d}},
 const b64=b=>new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result.split(',')[1]);f.readAsDataURL(b)});
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const keyOk=()=>aiBackendReady();
-function stat(m){$('gStat').textContent=m||(keyOk()?($('gOk').checked?'Máy chủ đã được cấu hình. Ảnh chỉ gửi đi khi bạn chủ động dùng AI và đã đồng ý.':'Hãy tích đồng ý gửi ảnh để dùng tính năng AI.'):'Chưa cấu hình máy chủ Supabase/Turnstile. Xem README đi kèm.')}
+function stat(m){$('gStat').textContent=m||(keyOk()?($('gOk').checked?'Gemini API đã sẵn sàng. Ảnh chỉ gửi đi khi bạn chủ động dùng AI và đã đồng ý.':'Hãy tích đồng ý gửi ảnh để dùng tính năng AI.'):'Chưa nhập Gemini API Key.')}
 const aiLogs=[];function aiLog(t){aiLogs.unshift(new Date().toLocaleTimeString('vi-VN')+' · '+t);aiLogs.length=Math.min(aiLogs.length,10);$('aiLog').innerHTML=aiLogs.map(esc).join('<br>')}
 
-/* ============ 3) LỚP GỌI GEMINI (đám mây) ============ */
+/* ============ 3) KẾT NỐI GEMINI TRỰC TIẾP (TẠM THỜI) ============ */
 let aiCtl=null;
-function aiNeed(){if(!keyOk()){go('ai');throw Error('Máy chủ AI chưa được cấu hình đầy đủ.')}if(!$('gOk').checked){go('ai');throw Error('Hãy đồng ý gửi ảnh tới Google Gemini trong tab AI trước khi dùng tính năng này.')}}
-async function gem(model,parts,cfg,o={}){aiNeed();const token=await aiTurnstileToken();const body=JSON.stringify({model,contents:[{parts}],...(cfg?{generationConfig:cfg}:{})});
- for(let a=0;a<2;a++){const ctl=aiCtl=new AbortController(),to=setTimeout(()=>ctl.abort('timeout'),o.timeout||90000);let r,j;
-  try{r=await fetch(`${SUPABASE_URL}/functions/v1/gemini-proxy`,{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'x-turnstile-token':token},body,signal:ctl.signal});j=await r.json().catch(()=>({}))}
-  catch(e){clearTimeout(to);if(ctl.signal.aborted)throw Error(ctl.signal.reason==='timeout'?'Hết thời gian chờ Gemini.':'Đã dừng.');throw Error('Không kết nối được tới máy chủ AI. Hãy kiểm tra mạng hoặc cấu hình Supabase.')}
-  clearTimeout(to);
-  window.__aiTurnstileToken='';
-  try{if(window.turnstile&&window.__aiTurnstileWidget!==null)window.turnstile.reset(window.__aiTurnstileWidget)}catch(_){}
-  if(r.ok){const br=j.promptFeedback&&j.promptFeedback.blockReason;if(br)throw Error('Yêu cầu bị bộ lọc an toàn chặn ('+br+'). Hãy đổi mô tả.');return j}
-  if((r.status===503||r.status===429)&&a===0){await new Promise(x=>setTimeout(x,1800));continue}
-  const m=j.error||j.message||'';
-  throw Error(r.status===400?'Yêu cầu không hợp lệ: '+m:r.status===401||r.status===403?'Không xác minh được yêu cầu. Hãy tải lại trang và thử lại.':r.status===404?'Không tìm thấy model "'+model+'" – hãy kiểm tra tên model.':r.status===429?'Bạn đã đạt giới hạn sử dụng AI. Hãy thử lại sau.':r.status===503?'Gemini đang quá tải hoặc máy chủ chưa cấu hình đủ secrets.':'Lỗi '+r.status+(m?': '+m:''))}}
+function aiNeed(){
+  if(!keyOk()){go('ai');throw Error('Bạn chưa nhập Gemini API Key.');}
+  if(!$('gOk').checked){go('ai');throw Error('Hãy đồng ý gửi ảnh tới Google Gemini trong tab AI trước khi dùng tính năng này.');}
+}
+async function gem(model,parts,cfg,o={}){
+  aiNeed();
+  const body=JSON.stringify({contents:[{parts}],...(cfg?{generationConfig:cfg}:{})});
+  for(let a=0;a<2;a++){
+    const ctl=aiCtl=new AbortController(),to=setTimeout(()=>ctl.abort('timeout'),o.timeout||90000);
+    let r,j;
+    try{
+      r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-goog-api-key':GEMINI_API_KEY},
+        body,signal:ctl.signal
+      });
+      j=await r.json().catch(()=>({}));
+    }catch(e){
+      clearTimeout(to);
+      if(ctl.signal.aborted)throw Error(ctl.signal.reason==='timeout'?'Hết thời gian chờ Gemini.':'Đã dừng.');
+      throw Error('Không kết nối được tới Google Gemini. Hãy kiểm tra mạng.');
+    }
+    clearTimeout(to);
+    if(r.ok){
+      const br=j.promptFeedback&&j.promptFeedback.blockReason;
+      if(br)throw Error('Yêu cầu bị bộ lọc an toàn chặn ('+br+'). Hãy đổi mô tả.');
+      return j;
+    }
+    if((r.status===503||r.status===429)&&a===0){await new Promise(x=>setTimeout(x,1800));continue;}
+    const m=j.error&&j.error.message||'';
+    throw Error(r.status===400?'Yêu cầu không hợp lệ: '+m:r.status===401||r.status===403?'API Key không hợp lệ hoặc không có quyền truy cập: '+m:r.status===404?'Không tìm thấy model "'+model+'" – hãy kiểm tra tên model.':r.status===429?'Bạn đã đạt giới hạn sử dụng Gemini. Hãy thử lại sau.':r.status===503?'Gemini đang quá tải.':'Lỗi '+r.status+(m?': '+m:''));
+  }
+}
 async function shrink(blob,max=1536,q=.88){const im=await bmp(blob),k=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(im.src);return blobOf(c,q)}
 const imgPart=async(b,max)=>({inline_data:{mime_type:'image/jpeg',data:await b64(await shrink(b,max))}});
 function jparse(t){t=String(t||'').replace(/^\s*```(?:json)?/i,'').replace(/```\s*$/,'').trim();try{return JSON.parse(t)}catch(_){const a=t.indexOf('{'),b=t.lastIndexOf('}');if(a>=0&&b>a)try{return JSON.parse(t.slice(a,b+1))}catch(_){}throw Error('AI trả về dữ liệu không đúng định dạng.')}}
