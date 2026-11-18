@@ -1,1 +1,153 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>AI Photo Studio</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
 
+<!-- ===== CAMERA ===== -->
+<section class="tab on" id="t-cam">
+<div class="vf" id="vf">
+ <canvas class="demo" id="demo" width="480" height="640"></canvas>
+ <video id="vid" playsinline muted style="display:none"></video>
+ <canvas id="ov"></canvas><div class="focus-ring" id="focusRing" aria-hidden="true"></div>
+ <div class="top"><button class="pill ico" id="bFlash" aria-label="Đèn flash" title="Đèn flash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></button><button class="pill" id="bAspect" aria-label="Khung hình">4:3</button><button class="pill ico" id="bAI" aria-label="AI" title="AI"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3l1.8 5.2L18 10l-5.2 1.8L11 17l-1.8-5.2L4 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></button><button class="pill ico" id="bSettings" aria-label="Cài đặt" title="Cài đặt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9L7 7M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg></button></div>
+ <div class="sug" id="sug" style="display:none"></div><div class="sugbtn" id="sugBtn" style="display:none"></div>
+ <div class="scene" id="scene"><span id="sceneTxt">Đang nhận diện cảnh…</span><button id="sceneGo" style="display:none"></button><button id="sceneAsk" title="Nhận diện chi tiết bằng Gemini (gửi 1 khung hình)">Hỏi AI</button><button id="sceneNo" style="display:none">✕</button></div>
+ <div class="lens" id="lens"><div class="lens-opts" id="lensOpts"></div><button class="lens-main" id="lensMain" aria-label="Zoom">1×</button></div>
+</div>
+<div class="pro" id="pro">
+ <div class="pro-head"><span>ĐIỀU KHIỂN THỦ CÔNG</span><span id="proSupport" class="note">Thông số thiết bị</span></div>
+ <div class="pro-values">
+  <button class="pro-param on" data-pro="ev"><small>EV</small><b id="pvEV">0.0</b></button>
+  <button class="pro-param" data-pro="iso"><small>ISO</small><b id="pvISO">100</b></button>
+  <button class="pro-param" data-pro="shutter"><small>S / SHUTTER</small><b id="pvShutter">Auto</b></button>
+  <button class="pro-param" data-pro="wb"><small>WB</small><b id="pvWB">5500K</b></button>
+  <button class="pro-param" data-pro="focus"><small>FOCUS</small><b id="pvFocus">AF</b></button>
+  <button class="pro-param" data-pro="ct"><small>CONTRAST</small><b id="pvCT">0</b></button>
+ </div>
+ <div class="pro-adjust" id="proAdjust"><div class="pro-adjust-title"><b id="proLabel">Bù phơi sáng (EV)</b><output id="proValue">0.0</output></div>
+  <div class="sl"><input type="range" id="pEV" min="-3" max="3" step=".1" value="0"><output id="oEV">0.0</output></div>
+  <div class="sl" hidden><input type="range" id="pISO" min="100" max="3200" step="100" value="100"><output id="oISO">100</output></div>
+  <div class="sl" hidden><input type="range" id="pWB" min="2500" max="8000" step="100" value="5500"><output id="oWB">5500</output></div>
+  <div class="sl" hidden><input type="range" id="pCT" min="-50" max="50" value="0"><output id="oCT">0</output></div>
+  <div class="pro-hint" id="proHint">Chạm thông số phía trên để chọn thông số cần điều chỉnh.</div>
+ </div>
+ <canvas id="hist" width="300" height="42"></canvas>
+</div>
+<div class="ctrl">
+ <div class="modes" id="modes"><b data-m="photo" class="on">Ảnh</b><b data-m="portrait">Chân dung</b><b data-m="night">Đêm</b><b data-m="pro">Pro</b></div>
+ <button class="look-btn" id="bLook">Phong cách: <b id="lookName">Tự nhiên</b></button>
+ <div class="shutrow"><div class="thumb" id="thumb"></div><button class="shut" id="shut"></button><button class="flip" id="flip" aria-label="Đổi camera"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M20 11a8 8 0 0 0-14.9-3M4 4v4h4M4 13a8 8 0 0 0 14.9 3M20 20v-4h-4"/></svg></button></div>
+ <div class="note" id="camNote" style="text-align:center;margin-top:6px"></div>
+</div>
+</section>
+
+<!-- ===== THƯ VIỆN ===== -->
+<section class="tab" id="t-gal">
+<div class="gh"><h2>Thư viện</h2><button class="gb" id="bSelect">Chọn</button><button class="gb" id="bGenNew">Tạo ảnh</button><button class="gb" id="bImp">Nhập</button><button class="gb" id="bExp">Xuất</button><input type="file" id="fImp" accept="image/*" multiple hidden></div>
+<div class="gal-tools"><div class="gal-filters" id="galFilters"><button class="chip on" data-filter="all">Tất cả</button><button class="chip" data-filter="fav">Yêu thích</button><button class="chip" data-filter="ai">Ảnh AI</button></div><div class="gal-selection" id="galSelection" hidden><span id="selCount">0 đã chọn</span><button class="btn" id="selFav">Yêu thích</button><button class="btn" id="selDelete">Xóa</button><button class="btn" id="selCancel">Hủy</button></div></div>
+<div class="gsearch"><input type="search" id="gQ" placeholder="Tìm theo thẻ, cảnh, mô tả…"></div><div class="chips" id="gTags" style="display:none"></div>
+<div id="galBody"></div>
+</section>
+<div class="viewer" id="imgViewer" aria-hidden="true">
+ <button class="vclose" id="vClose" aria-label="Đóng">×</button>
+ <img id="vImg" alt="Ảnh xem trước">
+ <div class="vbar"><button class="btn" id="vPrev" aria-label="Ảnh trước">‹</button><span class="note" id="vInfo">Xem ảnh</span><button class="btn" id="vFav">Yêu thích</button><button class="btn" id="vNext" aria-label="Ảnh tiếp">›</button><button class="btn p" id="vEdit">Chỉnh sửa</button></div>
+</div>
+
+<!-- ===== STUDIO ===== -->
+<section class="tab" id="t-stu">
+<div class="st">
+ <div class="cv" id="cvbox"><div class="empty" id="stEmpty">Chọn ảnh từ Thư viện để bắt đầu hậu kỳ.<br>Ảnh gốc luôn được bảo toàn.</div>
+ <div class="stk" id="stk" style="display:none"><canvas id="cvA"></canvas><canvas id="cvO" style="display:none"></canvas><span class="tag" id="tagA" style="right:8px">Sau</span><span class="tag" id="tagB" style="left:8px;display:none">Trước</span></div></div>
+ <div class="pnl" id="pnl">
+  <div class="rw"><button class="btn p" id="sAuto">Tự chỉnh AI</button><button class="btn" id="sCmp">So sánh</button><button class="btn" id="sRst">Gốc</button><button class="btn" id="sUndo" title="Hoàn tác" disabled>↶</button><button class="btn" id="sRedo" title="Làm lại" disabled>↷</button></div>
+  <input type="range" id="cmpR" min="0" max="100" value="50" style="display:none">
+  <h4>Phong cách AI</h4>
+  <div class="chips" id="presets"></div>
+  <div class="sl"><span>Cường độ</span><input type="range" id="pK" min="0" max="100" value="70"><output id="oK">70</output></div>
+  <h4>Ánh sáng</h4><div id="slL"></div><h4>Màu sắc</h4><div id="slC"></div><h4>Chi tiết</h4><div id="slD"></div>
+  <h4>Bố cục</h4>
+  <div class="rw"><button class="btn" id="cAI">Cắt khung AI</button><button class="btn" id="cRst">Bỏ cắt</button></div>
+  <h4>Trợ lý AI (Gemini)</h4>
+  <textarea id="gPr" rows="2" placeholder="VD: làm ấm ánh hoàng hôn, xoá người ở nền…"></textarea>
+  <div class="rw"><button class="btn" id="gAdj">AI gợi ý thông số</button><button class="btn" id="gAna">Phân tích ảnh</button></div>
+  <div class="aiOut" id="aiOut" style="display:none"></div>
+  <h4>Sáng tạo &amp; thay đổi nội dung</h4>
+  <div class="chips" id="kinds"></div><div class="note" id="kHint"></div>
+  <div class="rw"><button class="btn p" id="gGen">Tạo ảnh AI</button><button class="btn" id="gCancel" style="display:none">Dừng</button></div>
+  <div class="note" id="gMsg">Tính năng Gemini gửi ảnh (đã thu nhỏ) tới Google. Đồng ý gửi ảnh ở tab AI để dùng tính năng Gemini.</div>
+  <div class="rw" style="margin-top:14px"><button class="btn p" id="sSave">Lưu bản chỉnh</button><button class="btn" id="sDl">Tải JPG</button></div>
+ </div>
+</div></section>
+
+<!-- ===== TRUNG TÂM AI ===== -->
+<section class="tab" id="t-ai"><div class="aipage">
+ <h2>Trung tâm AI</h2>
+ <div class="card"><h3>Kết nối AI Camera Pro</h3>
+  <div class="note">Gemini được kết nối qua máy chủ bảo mật. Bạn không cần nhập API key hay đăng nhập tài khoản.</div>
+  <label class="chk"><input type="checkbox" id="gOk"> Tôi đồng ý gửi ảnh (đã thu nhỏ) và mô tả tới Google Gemini khi tự bấm một tính năng AI đám mây</label>
+  <div id="cf-turnstile" style="margin:12px 0"></div>
+  <div class="two"><input type="text" id="mTxt" placeholder="Model phân tích"><input type="text" id="mImg" placeholder="Model tạo ảnh"></div>
+  <div class="rw"><button class="btn" id="gTest">Kiểm tra kết nối</button></div>
+  <div class="note" id="gStat">Chưa cấu hình máy chủ. Hãy hoàn tất các bước trong hướng dẫn đi kèm.</div>
+ </div>
+ <div class="card"><h3>Chạy ngay trên máy (không gửi ảnh)</h3><ul id="aiCaps"></ul></div>
+ <div class="card"><h3>Tự động hoá (gửi ảnh tới Gemini)</h3>
+  <label class="chk"><input type="checkbox" id="tAuto"> Tự phân tích và gắn thẻ ảnh vừa chụp</label>
+  <div class="rw"><button class="btn" id="bBatch">Gắn thẻ ảnh chưa phân tích</button><button class="btn" id="bBatchX" style="display:none">Dừng</button></div>
+  <div class="note" id="batchSt"></div></div>
+ <div class="card"><h3>Tạo ảnh từ mô tả</h3>
+  <textarea id="tiPr" rows="3" placeholder="VD: một chú mèo cam ngồi bên cửa sổ, ánh nắng sớm"></textarea>
+  <select id="tiAr"><option>1:1</option><option>4:3</option><option>3:4</option><option>16:9</option><option>9:16</option></select>
+  <div class="rw"><button class="btn p" id="tiGo">Tạo ảnh</button><button class="btn" id="tiX" style="display:none">Dừng</button></div>
+  <div class="note" id="tiSt">Ảnh AI thường có kích thước khoảng 1K và được gắn nhãn AI trong Thư viện.</div></div>
+ <div class="card"><h3>Nhật ký AI</h3><div class="note" id="aiLog">Chưa có hoạt động.</div></div>
+</div></section>
+<div class="viewer" id="aiRes" aria-hidden="true">
+ <button class="vclose" id="rClose" aria-label="Đóng">×</button>
+ <img id="rImg" alt="Kết quả AI"><div class="note" id="rNote" style="max-width:560px;margin-top:8px;text-align:center"></div>
+ <div class="vbar"><button class="btn" id="rCmp">Xem ảnh gốc</button><span style="flex:1"></span><button class="btn" id="rOpen">Mở Studio</button><button class="btn p" id="rSave">Lưu vào Thư viện</button></div>
+</div>
+
+<div class="settings-overlay" id="camSettings" aria-hidden="true">
+ <div class="settings-panel">
+  <div class="settings-head"><b>Cài đặt Camera</b><button class="btn" id="settingsClose">Đóng</button></div>
+  <h4>Chụp ảnh</h4>
+  <label class="setting-row"><span>Khung hình</span><select id="captureAspect"><option value="4:3">4:3</option><option value="1:1">1:1</option><option value="16:9">Widescreen 16:9</option><option value="full">Full</option></select></label>
+  <label class="setting-row"><span>Độ phân giải</span><select id="captureRes"><option value="FHD">FHD</option><option value="4K">4K</option><option value="8K">8K</option></select></label>
+  <label class="setting-row"><span>Lưới</span><input type="checkbox" id="captureGrid"></label>
+  <label class="setting-row"><span>Hẹn giờ chụp</span><select id="captureTimer"><option value="0">Tắt</option><option value="3">3 giây</option><option value="5">5 giây</option><option value="10">10 giây</option></select></label>
+  <label class="setting-row"><span>Chất lượng JPEG</span><select id="captureQuality"><option value="0.88">Tiết kiệm dung lượng</option><option value="0.95" selected>Cao</option><option value="0.99">Tối đa</option></select></label>
+  <label class="setting-row"><span>Khung ảnh</span><select id="captureFrame"><option value="none">Không khung</option><option value="classic">Classic</option><option value="film">Film</option><option value="clean">Minimal</option></select></label>
+  <label class="setting-row"><span>Ghi thông tin ảnh</span><input type="checkbox" id="captureStamp"></label>
+  <h4>Định dạng &amp; điều khiển</h4>
+  <div class="setting-row"><span>RAW / DNG</span><span class="setting-disabled">Chưa hỗ trợ trên Web</span></div>
+  <div class="setting-note">RAW thật cần API Camera2/CameraX trong APK Android. Website hiện chỉ có thể lưu JPEG chất lượng cao; không giả lập RAW.</div>
+  <div class="setting-row"><span>Giơ bàn tay để chụp</span><span class="setting-disabled">Cần AI nhận diện bàn tay</span></div>
+  <div class="setting-row"><span>Nút âm lượng để chụp</span><span class="setting-disabled">Cần tích hợp native Android</span></div>
+  <div class="setting-note">Hai tính năng này được để trong thiết kế cài đặt, nhưng chưa bật giả vì trình duyệt không có quyền ổn định để nhận diện cử chỉ bàn tay hoặc chiếm phím âm lượng.</div>
+  <h4>Giao diện</h4>
+  <label class="setting-row"><span>Giao diện</span><select id="uiTheme"><option value="dark">Tối</option><option value="light">Sáng</option></select></label>
+  <div class="setting-note">Chọn khung ảnh và ghi thông tin sẽ được áp dụng lên file ảnh khi chụp; ảnh gốc cảm biến vẫn không phải RAW.</div>
+ </div>
+</div>
+
+<div class="settings-overlay" id="lookSheet" aria-hidden="true">
+ <div class="settings-panel">
+  <div class="settings-head"><b>Phong cách chụp</b><button class="btn" id="lookClose">Đóng</button></div>
+  <div class="look-grid">
+   <button class="look-chip on" data-look="natural">Tự nhiên</button><button class="look-chip" data-look="cinema">Cinema</button><button class="look-chip" data-look="warm">Golden</button><button class="look-chip" data-look="moody">Moody</button><button class="look-chip" data-look="vintage">Film</button><button class="look-chip" data-look="mono">B&amp;W</button>
+  </div>
+  <div class="setting-note">Phong cách được áp dụng vào cả khung xem trước và ảnh chụp.</div>
+ </div>
+</div>
+
+<nav><button class="on" data-t="cam">Camera</button><button data-t="gal">Thư viện</button><button data-t="stu">Studio</button><button data-t="ai">AI</button></nav>
+
+<!-- Thứ tự quan trọng: ai-engine.js (khai báo) trước, app.js (khởi động) sau -->
+<script src="ai-engine.js"></script>
+<script src="app.js"></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onAiTurnstileLoad" async defer></script>
+</body></html>
