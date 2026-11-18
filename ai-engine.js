@@ -1,11 +1,8 @@
+
 /* =====================================================================
    ai-engine.js — Bộ xử lý AI
    Nạp TRƯỚC app.js. File này chỉ KHAI BÁO; mọi thao tác gắn vào DOM nằm trong
    initAI(), được app.js gọi sau khi mọi thứ đã sẵn sàng.
-   Phụ thuộc vào app.js (dùng lúc chạy): $, clamp, ov, vid, src, stream, digital,
-   mode, aiOn, camCaps, P, hardwareEV, cur, E, base, SL, setE, render, pushH,
-   buildBase, cropR/srcBmp/preN, dbGet/dbPut/dbAll, bmp, blobOf, openStudio,
-   loadGal, go, note, applyView, syncPro, applyRealCameraControl, crop, ui(local).
    ===================================================================== */
 
 /* ============ 1) CẤU HÌNH GEMINI QUA SUPABASE ============ */
@@ -34,6 +31,7 @@ const aiBackendReady = () =>
   !SUPABASE_PUBLISHABLE_KEY.includes('YOUR_') &&
   TURNSTILE_SITE_KEY.length > 10 &&
   !TURNSTILE_SITE_KEY.includes('YOUR_');
+
 async function aiTurnstileToken(){
   if (!aiBackendReady()) throw Error('Chưa cấu hình Supabase/Turnstile. Hãy làm theo README trong gói cài đặt.');
   if (!window.turnstile || window.__aiTurnstileWidget === null) throw Error('Chưa tải được xác minh chống bot. Hãy tải lại trang.');
@@ -96,7 +94,7 @@ async function analyzePhoto(id){const rec=await dbGet(id);if(!rec)throw Error('K
  const fresh=await dbGet(id);if(fresh){fresh.scene=a.scene||fresh.scene||'';fresh.tags=tags.length?tags:['ảnh'];fresh.desc=a.desc;fresh.ana=a;await dbPut(fresh);if(cur&&cur.id===id){cur.scene=fresh.scene;cur.ana=a}}
  aiLog('Phân tích ảnh: '+(a.scene||'?')+' · '+tags.join(', '));return a}
 function renderAna(a){const o=$('aiOut');o.style.display='block';
- o.innerHTML=`<b>${esc(a.scene||'ảnh')}</b> · ${esc(a.desc)}<br><span class="note">Phơi sáng: ${esc(a.quality.exposure||'?')} · Nhiễu: ${esc(a.quality.noise||'?')} · Độ nét: ${esc(a.quality.sharpness||'?')}</span><div class="tags">${a.tags.map(t=>`<span>#${esc(t)}</span>`).join('')}</div>${a.tip?`<div class="note">💡 ${esc(a.tip)}</div>`:''}${Object.keys(a.edit).length?'<button class="btn" id="anaApply">Áp dụng gợi ý chỉnh</button>':''}`;
+ o.innerHTML=`<b>${esc(a.scene||'ảnh')}</b> · ${esc(a.desc)}<br><span class="note">Phơi sáng: ${esc(a.quality.exposure||'?')} · Nhiễu: ${esc(a.quality.noise||'?')} · Độ nét: ${esc(a.quality.sharpness||'?')}</span><div class="tags">${a.tags.map(t=>`<span>#${esc(t)}</span>`).join('')}</div>${a.tip?`<div class="note">${esc(a.tip)}</div>`:''}${Object.keys(a.edit).length?'<button class="btn" id="anaApply">Áp dụng gợi ý chỉnh</button>':''}`;
  const b=$('anaApply');if(b)b.onclick=()=>{setE({...E,...a.edit});render();pushH();$('gMsg').textContent='Đã áp dụng gợi ý từ phân tích (↶ để hoàn tác).'}}
 function autoTag(id){if(!$('tAuto').checked||!keyOk()||!$('gOk').checked)return;analyzePhoto(id).catch(e=>aiLog('Tự gắn thẻ lỗi: '+e.message))}
 
@@ -128,8 +126,8 @@ let aiKind='free';
 const kHint=()=>{$('kHint').textContent=KINDS[aiKind][1];$('gPr').placeholder=KINDS[aiKind][1]};
 let resP=null,resUrl='',origUrl='',showOrig=false;
 async function showResult(blob,txt,meta){resP={blob,meta};showOrig=false;if(resUrl)URL.revokeObjectURL(resUrl);if(origUrl){URL.revokeObjectURL(origUrl);origUrl=''}resUrl=URL.createObjectURL(blob);$('rImg').src=resUrl;
- const im=await bmp(blob);$('rNote').textContent=`${im.width}×${im.height}px · Ảnh do AI tạo/chỉnh sửa (sẽ gắn nhãn ✦ AI trong Thư viện)${txt?' · '+txt.slice(0,160):''}`;
- $('rCmp').style.display=meta.orig?'inline-block':'none';$('rCmp').textContent='◐ Xem ảnh gốc';$('aiRes').classList.add('on');$('aiRes').setAttribute('aria-hidden','false')}
+ const im=await bmp(blob);$('rNote').textContent=`${im.width}×${im.height}px · Ảnh do AI tạo/chỉnh sửa (sẽ gắn nhãn AI trong Thư viện)${txt?' · '+txt.slice(0,160):''}`;
+ $('rCmp').style.display=meta.orig?'inline-block':'none';$('rCmp').textContent='Xem ảnh gốc';$('aiRes').classList.add('on');$('aiRes').setAttribute('aria-hidden','false')}
 function closeRes(){$('aiRes').classList.remove('on');$('aiRes').setAttribute('aria-hidden','true');resP=null}
 async function saveRes(){if(!resP)return null;const b=resP.blob,m=resP.meta,id=Date.now();await dbPut({id,t:id,orig:b,cur:b,thumb:await thumbOf(b),p:null,src:'gemini',ai:true,aiKind:m.kind,aiPrompt:m.prompt||'',parent:m.parent||null,tags:['ai'],scene:''});aiLog('Đã lưu ảnh AI vào Thư viện');return id}
 let batchStop=false;
@@ -169,19 +167,19 @@ function plan(){
 }
 function ui(txt,ok,btns=[]){const s=$('sug'),b=$('sugBtn');s.style.display=aiOn?'block':'none';b.style.display=aiOn&&btns.length?'flex':'none';if(!aiOn)return;
  s.textContent=txt;s.classList.toggle('ok',!!ok);const sig=btns.map(x=>x[0]).join();if(sig!==sg.sig){sg.sig=sig;b.innerHTML=btns.map(([id,l,c])=>`<button data-a="${id}" class="${c||''}">${l}</button>`).join('')}}
-const applied=()=>ui(`✅ Đã chuyển khung AI · ${F.z.toFixed(1)}×`,true,[['undo','↩ Hoàn tác','no']]);
+const applied=()=>ui(`Đã chuyển khung AI · ${F.z.toFixed(1)}×`,true,[['undo','Hoàn tác','no']]);
 function suggest(){const w=ov.width,h=ov.height,now=performance.now();
- if(!subj){sg.hold=0;sg.q=null;sg.p=null;return F.on?applied():ui('✨ Hướng máy vào chủ thể…',false)}
+ if(!subj){sg.hold=0;sg.q=null;sg.p=null;return F.on?applied():ui('Hướng máy vào chủ thể…',false)}
  const p=plan(),q=sg.q;sg.q=q?{z:q.z+(p.z-q.z)*.5,tx:q.tx+(p.tx-q.tx)*.5,ty:q.ty+(p.ty-q.ty)*.5,txt:p.txt}:p;sg.hold++;
  const c=F.on?F:{z:digital,tx:w*(1-digital)/2,ty:h*(1-digital)/2},d=Math.abs(sg.q.z-c.z)>.15||Math.abs(sg.q.tx-c.tx)>.05*w||Math.abs(sg.q.ty-c.ty)>.05*h;
- if(sg.hold<3||now<sg.until){sg.p=null;return F.on?applied():ui(sg.hold<3?'✨ Đang phân tích bố cục…':'✨ AI đang theo dõi…',false)}
- if(d){sg.p=sg.q;ui(sg.q.txt,false,[['yes','✔ Đồng ý'],['no','✕ Bỏ qua','no']])}
- else{sg.p=null;F.on?applied():ui('✅ Bố cục đã đẹp – chụp đi!',true)}}
+ if(sg.hold<3||now<sg.until){sg.p=null;return F.on?applied():ui(sg.hold<3?'Đang phân tích bố cục…':'AI đang theo dõi…',false)}
+ if(d){sg.p=sg.q;ui(sg.q.txt,false,[['yes','Đồng ý'],['no','Bỏ qua','no']])}
+ else{sg.p=null;F.on?applied():ui('Bố cục đã đẹp – chụp đi!',true)}}
 function accept(){if(!sg.p)return;Object.assign(F,{on:true,z:sg.p.z,tx:sg.p.tx,ty:sg.p.ty});sg.p=null;sg.hold=0;sg.until=performance.now()+1200;applied()}
-function dismiss(){sg.p=null;sg.hold=0;sg.until=performance.now()+8000;F.on?applied():ui('✨ AI đang theo dõi…',false)}
-function undo(){F.on=false;sg.p=null;sg.hold=0;sg.until=performance.now()+5000;ui('↩ Đã về khung gốc',false)}
+function dismiss(){sg.p=null;sg.hold=0;sg.until=performance.now()+8000;F.on?applied():ui('AI đang theo dõi…',false)}
+function undo(){F.on=false;sg.p=null;sg.hold=0;sg.until=performance.now()+5000;ui('Đã về khung gốc',false)}
 
-const SCN={portrait:['👤 Chân dung','Chuyển sang chế độ Chân dung','portrait'],group:['👥 Chụp nhóm','Lùi ra một chút để lấy đủ mọi người',null],backlight:['☀ Ngược sáng','Mặt tối hơn nền – thử tăng EV',null,'ev'],night:['🌙 Thiếu sáng','Chế độ Đêm gộp nhiều khung để giảm nhiễu','night'],doc:['📄 Tài liệu','Giữ máy thẳng góc, tránh bóng đổ',null],sunset:['🌇 Hoàng hôn','Giữ EV thấp để không cháy sáng',null],landscape:['🏞 Phong cảnh','Đặt đường chân trời ở đường lưới 1/3',null],general:['🖼 Cảnh thông thường','',null]};
+const SCN={portrait:['Chân dung','Chuyển sang chế độ Chân dung','portrait'],group:['Chụp nhóm','Lùi ra một chút để lấy đủ mọi người',null],backlight:['Ngược sáng','Mặt tối hơn nền – thử tăng EV',null,'ev'],night:['Thiếu sáng','Chế độ Đêm gộp nhiều khung để giảm nhiễu','night'],doc:['Tài liệu','Giữ máy thẳng góc, tránh bóng đổ',null],sunset:['Hoàng hôn','Giữ EV thấp để không cháy sáng',null],landscape:['Phong cảnh','Đặt đường chân trời ở đường lưới 1/3',null],general:['Cảnh thông thường','',null]};
 const SC_VN={portrait:'chân dung',group:'nhóm',backlight:'ngược sáng',night:'thiếu sáng',doc:'tài liệu',sunset:'hoàng hôn',landscape:'phong cảnh',general:''},MODE_VN={photo:'Ảnh',portrait:'Chân dung',night:'Đêm',pro:'Pro'};
 const scn={k:'general',raw:'',n:0,dis:{},busy:false,cloud:null};
 function sceneReset(){scn.k='general';scn.raw='';scn.n=0;scn.cloud=null;drawScene()}
@@ -205,12 +203,12 @@ function drawScene(){const el=$('scene');el.style.display=aiOn?'flex':'none';if(
  $('sceneTxt').textContent=txt;const g=$('sceneGo');g.style.display=act?'inline-block':'none';if(act){g.textContent=act[0];g.dataset.a=act[1]}
  $('sceneNo').style.display=(act||scn.cloud)?'inline-block':'none'}
 function adjustEV(dv){const c=camCaps.exposureCompensation,lo=c?c.min:-3,hi=c?c.max:3;P.ev=clamp(+(P.ev+dv).toFixed(2),lo,hi);if(hardwareEV)applyRealCameraControl('exposureCompensation',P.ev);applyView();syncPro();note('EV '+P.ev.toFixed(1))}
-async function askScene(){if(scn.busy)return;try{aiNeed()}catch(e){scn.cloud={txt:'⚠ '+e.message};drawScene();return}
- scn.busy=true;$('sceneAsk').disabled=true;$('sceneTxt').textContent='🔍 Gemini đang nhận diện…';
+async function askScene(){if(scn.busy)return;try{aiNeed()}catch(e){scn.cloud={txt:''+e.message};drawScene();return}
+ scn.busy=true;$('sceneAsk').disabled=true;$('sceneTxt').textContent='Gemini đang nhận diện…';
  try{const s=src(),cr=crop(s),k=Math.min(1,768/Math.max(cr[2],cr[3])),c=document.createElement('canvas');c.width=Math.round(cr[2]*k);c.height=Math.round(cr[3]*k);c.getContext('2d').drawImage(s,...cr,0,0,c.width,c.height);
   const b=await blobOf(c,.85),j=await gem($('mTxt').value,[{inline_data:{mime_type:'image/jpeg',data:await b64(b)}},{text:'Nhìn khung hình camera này. Chỉ trả về JSON: {"scene":"cảnh hoặc chủ thể chính bằng tiếng Việt, tối đa 6 từ","mode":"photo|portrait|night|pro","tip":"1 lời khuyên chụp ngắn bằng tiếng Việt, tối đa 90 ký tự"}. mode=night nếu thiếu sáng, portrait nếu người là chủ thể.'}],{responseMimeType:'application/json',temperature:.2},{timeout:30000});
-  const r=jparse(txtOf(j)),md=['photo','portrait','night','pro'].includes(r.mode)?r.mode:null;scn.cloud={txt:'🔍 '+String(r.scene||'').slice(0,40)+(r.tip?' · '+String(r.tip).slice(0,90):''),mode:md};aiLog('Nhận diện camera: '+r.scene)}
- catch(e){scn.cloud={txt:'⚠ '+e.message}}
+  const r=jparse(txtOf(j)),md=['photo','portrait','night','pro'].includes(r.mode)?r.mode:null;scn.cloud={txt:''+String(r.scene||'').slice(0,40)+(r.tip?' · '+String(r.tip).slice(0,90):''),mode:md};aiLog('Nhận diện camera: '+r.scene)}
+ catch(e){scn.cloud={txt:''+e.message}}
  finally{scn.busy=false;$('sceneAsk').disabled=false;drawScene();const mine=scn.cloud;setTimeout(()=>{if(scn.cloud===mine){scn.cloud=null;drawScene()}},12000)}}
 
 /* ============ 8) GẮN SỰ KIỆN — app.js gọi initAI() một lần khi khởi động ============ */
@@ -241,8 +239,8 @@ function initAI(){
  $('kinds').innerHTML=Object.entries(KINDS).map(([k,v])=>`<button class="chip${k===aiKind?' on':''}" data-k="${k}">${v[0]}</button>`).join('');
  kHint();
  $('kinds').onclick=e=>{const k=e.target.dataset.k;if(!k)return;aiKind=k;document.querySelectorAll('#kinds .chip').forEach(b=>b.classList.toggle('on',b.dataset.k===k));kHint()};
- $('rCmp').onclick=()=>{if(!resP||!resP.meta.orig)return;showOrig=!showOrig;if(showOrig&&!origUrl)origUrl=URL.createObjectURL(resP.meta.orig);$('rImg').src=showOrig?origUrl:resUrl;$('rCmp').textContent=showOrig?'◐ Xem kết quả AI':'◐ Xem ảnh gốc'};
- $('rSave').onclick=async()=>{const id=await saveRes();if(id){closeRes();$('gMsg').textContent='Đã lưu ảnh AI (nhãn ✦ AI) vào Thư viện.';$('tiSt').textContent='Đã lưu ảnh AI vào Thư viện.';loadGal()}};
+ $('rCmp').onclick=()=>{if(!resP||!resP.meta.orig)return;showOrig=!showOrig;if(showOrig&&!origUrl)origUrl=URL.createObjectURL(resP.meta.orig);$('rImg').src=showOrig?origUrl:resUrl;$('rCmp').textContent=showOrig?'Xem kết quả AI':'Xem ảnh gốc'};
+ $('rSave').onclick=async()=>{const id=await saveRes();if(id){closeRes();$('gMsg').textContent='Đã lưu ảnh AI (nhãn AI) vào Thư viện.';$('tiSt').textContent='Đã lưu ảnh AI vào Thư viện.';loadGal()}};
  $('rOpen').onclick=async()=>{const id=await saveRes();if(id){closeRes();openStudio(id)}};
  $('rClose').onclick=closeRes;$('aiRes').onclick=e=>{if(e.target===$('aiRes'))closeRes()};
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('aiRes').classList.contains('on'))closeRes();if(e.key==='Escape'&&$('camSettings').classList.contains('on'))closeSettings()});
